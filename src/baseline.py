@@ -110,7 +110,15 @@ def main():
 
     fit_df = with_aug(tr, SEED) if use_aug else tr
     X, (Xt,) = featurize(fit_df, [te])
-    pred = LinearSVC(C=0.5, class_weight="balanced").fit(X, fit_df.target.values).predict(Xt)
+    clf = LinearSVC(C=0.5, class_weight="balanced").fit(X, fit_df.target.values)
+    pred = clf.predict(Xt)
+    if save_run:  # the single full-data SVM used at inference (param cap: coef_ + intercept_)
+        d = save_run / "full"
+        d.mkdir(parents=True, exist_ok=True)
+        np.save(d / "test_logits.npy", (clf.decision_function(Xt) * temp).astype(np.float32))
+        n_params = int(clf.coef_.size + clf.intercept_.size)
+        (d / "metrics.json").write_text(json.dumps({"n_params": n_params, "temperature": temp, "aug": use_aug}))
+        print(f"full-data SVM: {n_params:,} params -> {d}")
     out = ROOT / ("submissions/baseline_tfidf_aug.csv" if use_aug else "submissions/baseline_tfidf.csv")
     pd.DataFrame({"example_id": te.example_id, "target": pred}).to_csv(out, index=False)
     print("wrote", out, "test Devanagari share", round(te.is_dev.mean(), 3))

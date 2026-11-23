@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score
 
+from testlike import testlike_scores
+
 ROOT = Path(__file__).resolve().parents[1]
 OOS = 55
 
@@ -97,6 +99,11 @@ def main():
     tuned = f1_score(y, apply_rule(p, bias, tau), average="macro")
     pred = apply_rule(test, bias, tau)
     print(f"blend OOF macro-F1 raw {raw:.4f} -> tuned {tuned:.4f} (tau {tau}, shrunk bias)")
+    full = np.zeros(len(Y), int)
+    full[mask] = apply_rule(p, bias, tau)
+    tl = testlike_scores(Y, full, mask)
+    if "testlike" in tl:
+        print(f"test-like exam (tuned, {tl['n_testlike']} rows): {tl['testlike']:.4f} -> estimated public LB ~{tl['est_lb']:.3f} (+-0.01)")
     print(f"test: predicted class-55 share {np.mean(pred == OOS):.3f} (train share {np.mean(Y == OOS):.3f})")
     tag = "+".join(Path(r).name for r in a.runs)
     out = Path(a.out or ROOT / f"submissions/{tag}.csv")
@@ -104,7 +111,8 @@ def main():
     pd.DataFrame({"example_id": te.example_id, "target": pred}).to_csv(out, index=False)
     np.save(out.with_suffix(".probs.npy"), test)
     (out.with_suffix(".json")).write_text(json.dumps({"runs": a.runs, "weights": w, "oof_raw": raw, "oof_tuned": tuned,
-                                                      "tau": tau, "bias": bias.round(3).tolist()}, indent=1))
+                                                      "tau": tau, "bias": bias.round(3).tolist(),
+                                                      "testlike": tl.get("testlike"), "est_lb": tl.get("est_lb")}, indent=1))
     print("wrote", out)
     if a.pseudo:
         conf = test.max(1)

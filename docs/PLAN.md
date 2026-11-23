@@ -34,6 +34,8 @@ Submission files: `submissions/v001_tfidf.csv`, `submissions/v002_tfidf-aug.csv`
 | MuRIL defaults (lr 3e-5, llrd 0.9, 6 ep), fold 0 | 0.738 | 0.717 | — | not submitted (under-trained) |
 | **MuRIL lr 6e-5, llrd 0.95, 10 ep** (`--run muril_lr6`), fold 0 | 0.885 | 0.874 | 0.888 | **v003 = 0.81917** |
 | blend MuRIL fold0 0.4 + TF-IDF 0.6 (`--search`) | — | — | 0.9115 (fold-0 rows) | v004, **not submitted** |
+- **MuRIL 5-fold (`muril_lr6`)**: folds 0.879 / 0.894 / 0.893 / 0.888 / 0.876; OOF 0.8909 (tuned 0.8927, test-like est. LB ~0.827).
+- **MuRIL + TF-IDF 0.5/0.5, 5-fold OOF**: raw 0.9115 → tuned 0.9150; test-like est. LB **~0.848** (best real 0.819). `src/assemble.py` builds the compliant version from the full-data models (246,890,864 params).
 - MuRIL needs a higher LR than the defaults; ~63 s/epoch on T4, still creeping up at epoch 10.
 - TF-IDF and MuRIL make different errors: blending added +0.02–0.03 OOF. `baseline.py --save_run runs/tfidf_aug` writes TF-IDF folds (same splits, temperature-scaled SVM margins).
 - **Param cap applies to what produces the submission**: 5-fold MuRIL average = 1.19B (not allowed). Allowed final: 1 full-data MuRIL (237,599,288) + 1 TF-IDF SVM (9,291,576 = 165,920 features × 56) = 246.9M. Fold runs and HingRoBERTa are training-time tools only (OOF tuning, pseudo-label teachers).
@@ -72,6 +74,7 @@ Only one 238–278M model fits under 300M, so a multi-model blend must be **dist
 
 ## 5b. Submission versioning (`src/subtrack.py`; team budget **5 submissions for the whole event**, 2 used)
 Every candidate goes through the registry; never upload a raw `postprocess.py` output (it is overwritten on each run).
+**Local LB proxy** (`src/testlike.py`, AUC 0.678 train-vs-test): on fold-0 rows it ranks TF-IDF 0.8724 < MuRIL 0.8802, matching the LB, with a steady offset of ~0.061 (MuRIL tuned estimate 0.822 vs real 0.819). Blend MuRIL+TF-IDF estimate ~0.842. The Roman-only subset ranks the models wrongly, so it is diagnostic only.
 **Policy:** no exploratory uploads. Upload only a param-cap-compliant model whose full 5-fold OOF beats the last submitted version by ≥ +0.015. Planned: #3 full MuRIL + TF-IDF (tuned on 5-fold OOF), #4 same with pseudo-labels, #5 reserve.
 1. Commit the code first (the registry records the commit hash and flags uncommitted `src/ kaggle/ analysis/` changes as `dirty=1`).
 2. `subtrack.py add <csv> --stage <name> --note "..."`: validates ids/targets against `data/test.csv`, refuses duplicates, freezes it as `submissions/vNNN_<stage>.csv` (+ sidecar `.json`, OOF F1 read from it).

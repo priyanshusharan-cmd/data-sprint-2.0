@@ -33,6 +33,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # + torch t
 | GPU fine-tune, 5 folds, resumable | `python kaggle/train.py --model muril` (`hingroberta`, `indicbert`) | Kaggle via `kaggle/train_runner.ipynb` |
 | Full-data model for demo | `python kaggle/train.py --model muril --full --epochs N` | Kaggle |
 | Blend + tune + submission | `.venv/bin/python src/postprocess.py runs/muril runs/hingroberta [--pseudo 0.92]` | Mac |
+| **Final compliant submission** (1 MuRIL + 1 TF-IDF, tuned on 5-fold OOF, param assert) | `python src/assemble.py --oof runs/muril_lr6 runs/tfidf_aug --full runs/muril_full/full runs/tfidf_aug/full` | any |
 | Freeze + register a submission (validate, version, quota, LB) | `python src/subtrack.py add <csv> --stage <name>` / `submitted vNNN` / `lb vNNN <score>` / `list` | any |
 | Smoke test trainer on CPU | `.venv/bin/python kaggle/train.py --model e5small --limit 400 --epochs 1 --n_folds 2 --folds 0 --run smoke` | Mac |
 
@@ -41,5 +42,6 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # + torch t
 - `src/augment.py` — dataset-style romanizer (aa/ee/oo + schwa deletion), colloquial fillers, number→digit, ASR noise. `augment(text, rng)`.
 - `kaggle/train.py` — encoder + mean-pool + multi-sample-dropout head; sqrt-inverse class weights, label smoothing, LLRD, cosine schedule, fp16; best epoch by mean of `val_clean` and `val_shift` macro-F1. Writes `runs/<model>/fold<k>/{val_idx,val_logits,val_emb,test_logits,test_emb}.npy` + `metrics.json` (written last = fold complete).
 - `src/postprocess.py` — averages softmax over folds/runs, tunes class-55 confidence threshold `tau` + per-class log-prob biases (shrunk ×0.5) on OOF, writes `submissions/<runs>.csv`, `.probs.npy`, `.json`.
+- `src/testlike.py` — local LB proxy: adversarial validation picks the 25% most test-like train rows (`data/testlike.csv`); `postprocess.py` prints their tuned macro-F1 and `estimated public LB = testlike − 0.061` (calibrated on v002/v003, ±0.01). Check it before every upload.
 - `src/subtrack.py` — submission registry (`submissions/registry.csv`): every upload is a frozen `vNNN_<stage>.csv` tied to a commit and git tag `sub-vNNN`; see PLAN.md §5b.
 - `analysis/` — EDA, class keyword dump, augmentation experiment, model scan.
