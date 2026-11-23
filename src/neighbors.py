@@ -46,6 +46,26 @@ def knn_probs(index_keys, index_y, query_keys, k=K):
     return probs, best
 
 
+class KnnIndex:
+    """Prebuilt index over the training rows for fast single-query use (same maths as knn_probs)."""
+
+    def __init__(self, train_text, y, k=K):
+        self.keys = pd.Series(train_text).map(phonetic_key).values
+        self.y, self.k = np.asarray(y), k
+        self.vec = _vec().fit(self.keys)
+        self.AT = self.vec.transform(self.keys).T.tocsr()
+
+    def query(self, texts):
+        Q = self.vec.transform(pd.Series(texts).map(phonetic_key).values)
+        sim = (Q @ self.AT).toarray()
+        top = np.argpartition(-sim, self.k, axis=1)[:, :self.k]
+        ts = np.take_along_axis(sim, top, 1)
+        w = np.exp(TEMP * (ts - ts.max(1, keepdims=True)))
+        w /= w.sum(1, keepdims=True)
+        probs = np.stack([np.bincount(self.y[top[i]], weights=w[i], minlength=N_CLASSES) for i in range(len(top))])
+        return probs, ts.max(1)
+
+
 def oof_knn(train_text, y):
     keys = pd.Series(train_text).map(phonetic_key).values
     probs = np.zeros((len(y), N_CLASSES)); best = np.zeros(len(y))
