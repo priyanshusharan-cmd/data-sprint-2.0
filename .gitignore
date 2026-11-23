@@ -10,3 +10,4 @@ submissions/*
 !submissions/v*.csv
 !submissions/v*.json
 !submissions/registry.csv
+.kvenv/
