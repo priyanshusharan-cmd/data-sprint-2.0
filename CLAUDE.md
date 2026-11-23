@@ -22,7 +22,7 @@ Read `docs/PLAN.md` first: it has the pipeline stages, what is done, what is nex
 ## Setup
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # + torch transformers sentencepiece for kaggle/train.py
-# data is git-ignored: download train.csv, test.csv, sample_submission.csv from the Kaggle Data tab into data/
+# data/ (Kaggle CSVs, 1.8 MB) is committed — repo must stay private
 ```
 
 ## Commands

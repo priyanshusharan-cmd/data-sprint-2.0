@@ -1,6 +1,4 @@
 .venv/
-data/
-submissions/
 __pycache__/
 .DS_Store
 *.onnx

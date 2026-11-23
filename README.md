@@ -11,7 +11,7 @@ unweighted macro-F1, model budget <= 300M parameters at inference.
 ## Layout
 | path | what |
 |---|---|
-| `data/` | Kaggle CSVs (git-ignored) |
+| `data/` | Kaggle CSVs (committed; repo is private) |
 | `src/normalize.py` | Devanagari→Latin (reused from our Amazon ML Challenge 2026 pipeline) + Hinglish phonetic folding |
 | `src/augment.py` | test-style augmentation: dataset-style romanizer, colloquial fillers, number→digit, ASR noise |
 | `src/baseline.py` | CPU TF-IDF + LinearSVC (`--aug` for augmentation) |
