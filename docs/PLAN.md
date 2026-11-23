@@ -90,6 +90,23 @@ Only `vNNN_*` files and `registry.csv` are tracked in `submissions/`; everything
 5. Pick 2 final submissions from #3/#4.
 6. Demo track (parallel, needs the `--full` weights): ONNX + Gradio, measure latency on CPU.
 
+## 6b. Branch `exp/priyanshu`: score upgrades (all opt-in; defaults reproduce `main`)
+Built and smoke-tested on CPU (23 Nov). Not merged; the owner merges what wins on the test-like exam / LB.
+
+| piece | where | what | local evidence so far |
+|---|---|---|---|
+| mined fillers + loanword respelling | `src/augment.py` (`mine_fillers`, `mine_spellings`, `respell`) | replaces the hand-written filler list (compliance: no Claude-written word lists); 286 auto-mined spelling pairs (kofee→coffee, dolar→dollar, jyada→zyada) | TF-IDF CV 0.8855 (was 0.8859): same score, now rule-clean |
+| continued MLM pretraining | `kaggle/mlm_pretrain.py` → `train.py --init_from` | 2 epochs on train+test+augmented text | GPU run pending |
+| importance weighting | `train.py --importance 0.5` | up-weights test-like rows (`data/testlike.csv`) | GPU run pending |
+| logit adjustment | `train.py --logit_adj 1 --class_weight 0` | Menon et al. loss for macro-F1 tails | GPU run pending |
+| EMA, FGM | `train.py --ema 0.999 --fgm 1.0` | weight averaging; adversarial embedding noise | GPU run pending |
+| label-noise weights | `src/noise_weights.py` → `train.py --sample_weights` | down-weights rows whose OOF label prob < 0.05 while another class > 0.9 | TF-IDF OOF flags 303 rows (1.8%): 12→13, 35→44, 31→0 … rerun on the MuRIL+TF-IDF blend |
+| distillation | `train.py --teacher t.npz --kd_test 1` | full-data student learns the teacher blend's soft labels on train + test | GPU run pending; needs a teacher npz from 5-fold OOF + fold-avg test probs |
+| post-processing | `postprocess.py --temps --group_vote --prior_em --stack` | temperatures; voting over filler-variant groups (13.9% of test); Saerens label-shift EM; LR stacker | on TF-IDF alone: temps/group vote ≈ no change, prior EM changes 3.9% of test (raises class 55 to 8.2%: unverified, risky), **stacker worse (0.861 vs 0.886): keep off** |
+| one-cell Kaggle runner | `kaggle/one_cell.py` | paste into one cell; queue of jobs; resumable | — |
+
+Note: `val_shift` on this branch uses the new augmentation, so compare runs across branches on `val_clean` (MuRIL fold 0 = 0.885).
+
 ## 7. Ideas not yet implemented (ranked by expected gain)
 - **Distillation** of MuRIL+HingRoBERTa blend into one ≤300M student on train + test (soft labels) — usually beats either single model.
 - **Domain-adaptive MLM** (continue pretraining 1–2 epochs on train+test+augmented text) before fine-tuning.

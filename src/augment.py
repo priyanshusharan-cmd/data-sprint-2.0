@@ -9,9 +9,21 @@ Measured shift (analysis/eda.py):
 
 All functions are deterministic given an `rng`, rule-based, and use no external data or LLMs.
 The official task description itself uses this register: "bhai kal subah 7 baje ka alarm laga de".
+
+Word lists are MINED from the competition text (train + unlabelled test), never hand-written:
+  * fillers  -- `mine_fillers()`: first/last words common in test, rare in train, attached to many different
+                queries and mostly found at the query edge (e.g. hey, bhai, zara, yaar / karo na, jaldi se)
+  * spellings -- `mine_spellings()`: train transliterations whose phonetic key equals an unseen test spelling
+                (kofee -> coffee, dolar -> dollar, jyada -> zyada)
+Only the Hindi number words in NUM are a small fixed lexicon (team-reviewed).
 """
+import collections
+import functools
 import random
 import re
+from pathlib import Path
+
+import pandas as pd
 
 from normalize import _CONS  # Devanagari consonant table reused from the Amazon ML Challenge pipeline
 
@@ -71,17 +83,86 @@ def romanize(text, rng=None, p_long=0.75):
     return " ".join(_romanize_word(w, rng.random() < p_long) if DEV.search(w) else w for w in text.split())
 
 
-# --- colloquial register --------------------------------------------------------------------
-PREFIX = ["bhai", "yaar", "hey", "please", "plz", "zara", "ok", "suno", "achha"]
-SUFFIX = ["na", "yaar", "bhai", "please", "jaldi", "plz", "jaldi se", "abhi"]
+# --- mined word lists ------------------------------------------------------------------------
+DATA = Path(__file__).resolve().parents[1] / "data"
+_ALPHA = re.compile("^[a-z]+$")
+
+
+@functools.lru_cache(maxsize=1)
+def _texts():
+    try:
+        tr = pd.read_csv(DATA / "train.csv").query_text.str.lower().tolist()
+        te = pd.read_csv(DATA / "test.csv").query_text.str.lower().tolist()
+    except FileNotFoundError:
+        return [], []
+    return tr, te
+
+
+@functools.lru_cache(maxsize=1)
+def mine_fillers(min_count=12, max_train_ratio=0.2, min_diversity=0.5, min_edge_share=0.6):
+    """(prefixes, suffixes) mined from text. A filler is an edge word/bigram that is frequent at the edge of test
+    queries, rare there in train, precedes/follows many different words, and mostly occurs at an edge."""
+    tr, te = _texts()
+    if not te:
+        return (), ()
+    scale = len(te) / max(len(tr), 1)
+    tok_te = collections.Counter(w for s in te for w in s.split())
+    edge_te = collections.Counter(x for s in te if len(s.split()) >= 3 for x in {s.split()[0], s.split()[-1]})
+    out = []
+    for side in ("pre", "suf1", "suf2"):
+        cnt, ctx, cnt_tr = collections.Counter(), collections.defaultdict(set), collections.Counter()
+        for texts, c in ((te, cnt), (tr, cnt_tr)):
+            for s in texts:
+                w = s.split()
+                if len(w) < 3:
+                    continue
+                k, nb = {"pre": (w[0], w[1]), "suf1": (w[-1], w[-2]), "suf2": (" ".join(w[-2:]), w[-3])}[side]
+                if all(_ALPHA.match(x) for x in k.split()):
+                    c[k] += 1
+                    if texts is te:
+                        ctx[k].add(nb)
+        keep = [k for k, v in cnt.items()
+                if v >= min_count and cnt_tr[k] * scale < max_train_ratio * v and len(ctx[k]) / v >= min_diversity
+                and (" " in k or edge_te[k] / tok_te[k] >= min_edge_share)]
+        out.append(sorted(keep))
+    return tuple(out[0]), tuple(out[1] + out[2])
+
+
+@functools.lru_cache(maxsize=1)
+def mine_spellings(min_len=4):
+    """{train spelling: test spelling} for Roman words whose phonetic key matches an unseen test spelling."""
+    from normalize import clean, phonetic_key
+    tr, te = _texts()
+    if not te:
+        return {}
+    v_tr = collections.Counter(w for s in tr for w in clean(s).split())
+    v_te = collections.Counter(w for s in te for w in clean(s).split())
+    by_key = collections.defaultdict(list)
+    for w, c in v_tr.items():
+        if len(w) >= min_len and _ALPHA.match(w):
+            by_key[phonetic_key(w)].append((c, w))
+    out = {}
+    for w, c in v_te.items():
+        if len(w) >= min_len and w not in v_tr and _ALPHA.match(w):
+            k = phonetic_key(w)
+            if k in by_key:
+                out[max(by_key[k])[1]] = w
+    return out
 
 
 def colloquial(text, rng):
-    if rng.random() < 0.5:
-        text = f"{rng.choice(PREFIX)} {text}"
-    if rng.random() < 0.6:
-        text = f"{text} {rng.choice(SUFFIX)}"
+    pre, suf = mine_fillers()
+    if pre and rng.random() < 0.5:
+        text = f"{rng.choice(pre)} {text}"
+    if suf and rng.random() < 0.6:
+        text = f"{text} {rng.choice(suf)}"
     return text
+
+
+def respell(text, rng, p=0.7):
+    """Swap train transliterations for the spelling seen in test (kofee -> coffee) with prob p per word."""
+    m = mine_spellings()
+    return " ".join(m[w] if w in m and rng.random() < p else w for w in text.split())
 
 
 # --- number words -> digits -----------------------------------------------------------------
@@ -128,10 +209,12 @@ def asr_noise(text, rng, p=0.12):
     return " ".join(out)
 
 
-def augment(text, rng, p_roman=0.7, p_coll=0.35, p_digit=0.5, p_noise=0.5):
+def augment(text, rng, p_roman=0.7, p_coll=0.35, p_digit=0.5, p_noise=0.5, p_respell=0.5):
     """One random view of `text` drawn to look like the test distribution."""
     if DEV.search(text) and rng.random() < p_roman:
         text = romanize(text, rng)
+    if rng.random() < p_respell:
+        text = respell(text, rng)
     if rng.random() < p_digit:
         text = digits(text, rng)
     if rng.random() < p_coll:
