@@ -1,0 +1,81 @@
+# Plan, status and findings — NLP track
+
+Last updated: 23 Nov 2026. Leaderboard at that time: top public score 0.837 (5 teams); organiser baseline (char TF-IDF + LinearSVC, no augmentation) 0.520 public.
+
+## 1. Data (measured, `analysis/eda.py`)
+| | train | test |
+|---|---|---|
+| rows | 16,936 | 4,912 |
+| Devanagari / Roman / mixed | **61% / 33% / 6%** | **33% / 64% / 3%** |
+| tokens per query | mean 7.6, p95 14 | mean 7.9, p95 14 |
+| rows with digits | 0% | 1.3% |
+| fillers (bhai, please, na, jaldi, hey) | ≈0% | ~3% each |
+
+- 56 classes, all present; smallest class 36 (84 rows), largest 48 (1,224). Class 55 = 249 rows.
+- Train class 55 looks like a few held-out intents merged (alarms, coffee, podcasts, games). Test OOS also contains **novel** topics (coding, homework, definitions), so class 55 needs a confidence rule, not only a learned class.
+- Many low-similarity test rows are **in-domain intents written in English-heavy colloquial Hinglish** ("currency convert karo hundred usd to inr yaar" → currency class 10; "convert 5 pm ist to pst" → time-zone class 37). Pretrained multilingual encoders handle these far better than TF-IDF.
+- Test nearest-train cosine (char TF-IDF): mean 0.58 vs 0.73 for a held-out train split; 32% of test rows below 0.5 vs 11%. This is why train-CV over-estimates the leaderboard.
+- Inferred class meanings (top keywords per class): `analysis/classes.py` output.
+
+## 2. Experiments so far (CPU)
+| experiment | macro-F1 |
+|---|---|
+| fit Devanagari only → score real Roman rows, raw text | 0.061 |
+| same + romanized copies (`augment.romanize`) | 0.887 |
+| phonetic features + romanized copies | 0.922 |
+| TF-IDF baseline, 5-fold CV | 0.8733 |
+| TF-IDF + augmentation (2 views/row), 5-fold CV | **0.8859** (Roman rows 0.904 → 0.931) |
+Submission files: `submissions/baseline_tfidf.csv`, `submissions/baseline_tfidf_aug.csv` (not yet LB-scored).
+
+## 3. Model choice (`analysis/model_scan.py` + literature)
+| model | params | tokens/word dev / roman | decision |
+|---|---|---|---|
+| `google/muril-base-cased` | 238M | **1.13 / 1.38** | **primary** |
+| `l3cube-pune/hing-roberta-mixed` | 278M | 1.29 / 1.56 | **second** (best Hinglish results in the papers we found) |
+| `ai4bharat/IndicBERTv2-MLM-Sam-TLM` | 278M | 1.10 / 1.55 | third, if GPU time allows |
+| `microsoft/mdeberta-v3-base` | 278M | 1.90 / 1.65 | low priority (fp16 overflow on T4, no Hinglish evidence) |
+| `xlm-roberta-base` | 278M | 1.29 / 1.56 | skip (HingRoBERTa is XLM-R + Hinglish pretraining) |
+| `jhu-clsp/mmBERT-base` | 307M | — | over the cap |
+Only one 238–278M model fits under 300M, so a multi-model blend must be **distilled** into one student for the final/demo model.
+
+## 4. Pipeline stages
+| # | stage | where | status |
+|---|---|---|---|
+| 1 | EDA + shift-aware validation (clean + `val_shift` = augmented val) | CPU | done |
+| 2 | normalisation + test-style augmentation | CPU | done |
+| 3 | TF-IDF safety submission | CPU | done, **upload and record LB** |
+| 4 | fine-tune MuRIL and HingRoBERTa-mixed, 5 folds | **Kaggle GPU** | **next** |
+| 5 | blend, tune class-55 `tau` + class biases | CPU | code ready |
+| 6 | pseudo-label round: `postprocess.py --pseudo 0.92` → `train.py --pseudo data/pseudo_*.csv` | GPU | code ready |
+| 7 | final single model ≤300M: best model `--full`, or distil blend probs into it | GPU | to build (distillation = soft-label loss, not yet coded) |
+| 8 | ONNX export + int8, latency check <50 ms, Gradio demo (top-3 intents, confidence, OOS fallback, latency) | CPU | to build |
+| 9 | 2-page write-up + PPT (organiser template) + reproducible training notebook | — | to build |
+
+## 5. Kaggle workflow (reliable, resumable)
+1. GitHub fine-grained token, this repo only, Contents read-only → Kaggle notebook **Add-ons → Secrets → `GITHUB_TOKEN`**.
+2. Import `kaggle/train_runner.ipynb`; Settings: GPU T4 x2 / P100, Internet On; set `MODEL`.
+3. **Save Version → Save & Run All (Commit)**: runs server-side, survives disconnects (~35–45 min per model).
+4. Progress: version log shows per-epoch JSON (`val_clean`, `val_shift`). Results: download `runs_<model>.zip` → unzip into `runs/` locally.
+5. Interrupted? Add the previous version's output as Input and commit again; finished folds are skipped.
+6. One model per notebook; run MuRIL and HingRoBERTa in parallel copies.
+
+## 6. Next steps, in order
+1. Upload `submissions/baseline_tfidf_aug.csv`; record the public LB score in README.
+2. Run MuRIL (5 folds) and HingRoBERTa-mixed (5 folds) on Kaggle.
+3. `postprocess.py runs/muril`, `runs/hingroberta`, and the blend; submit the best; compare LB vs `val_shift` to calibrate how much CV over-estimates.
+4. Pseudo-label round 1 with the blend (threshold ~0.92), retrain the better model with `--pseudo`.
+5. Final model: `--full` on train + pseudo with the CV-best epoch count; pick 2 final submissions (Kaggle allows 2).
+6. Demo track (parallel, needs the `--full` weights): ONNX + Gradio, measure latency on CPU.
+
+## 7. Ideas not yet implemented (ranked by expected gain)
+- **Distillation** of MuRIL+HingRoBERTa blend into one ≤300M student on train + test (soft labels) — usually beats either single model.
+- **Domain-adaptive MLM** (continue pretraining 1–2 epochs on train+test+augmented text) before fine-tuning.
+- **Translate-train**: Hindi→English copies of train rows via an open MT model (IndicTrans2, MIT) to teach English phrasings seen in test. Must be an open model, never a commercial API.
+- **kNN / Mahalanobis OOS score** on `test_emb` vs train embeddings, combined with the softmax threshold.
+- **Vocabulary trimming**: keeping only tokens seen in train+test+augmentation shrinks a 278M model to ~100M, which would allow a 2–3 model ensemble under 300M. Risk: unseen demo inputs map to UNK.
+- R-Drop / adversarial (FGM) training for noise robustness.
+
+## 8. Risks
+- Public LB is only 974 rows (~17 per class): noisy. Trust `val_shift` + LB together; don't chase small LB gains.
+- `val_shift` uses our own augmenter, so it partly measures what we trained on. The real check is the LB.
+- Class-55 threshold tuned on OOF is train-distribution; novel OOS in test is likely under-detected. Watch the predicted 55 share on test (train share 1.5%).
