@@ -27,9 +27,11 @@ ROOT = Path(__file__).resolve().parents[1]
 class Brain(nn.Module):
     """Same parameter layout as kaggle/train.py Net (dropouts have no params), built from config only."""
 
-    def __init__(self, hf_name, n_classes=56):
+    def __init__(self, hf_name, n_classes=56, local_config=None):
         super().__init__()
-        self.enc = AutoModel.from_config(AutoConfig.from_pretrained(hf_name))
+        # a saved encoder_config.json next to model.pt makes loading fully offline; otherwise fetch the tiny config
+        src = local_config if local_config is not None and Path(local_config).exists() else hf_name
+        self.enc = AutoModel.from_config(AutoConfig.from_pretrained(src))
         self.head = nn.Linear(self.enc.config.hidden_size, n_classes)
 
     @torch.inference_mode()
@@ -43,7 +45,10 @@ def load(full_dir):
     full_dir = Path(full_dir)
     cfg = json.loads((full_dir.parent / "config.json").read_text())
     tok = AutoTokenizer.from_pretrained(full_dir / "tokenizer")
-    model = Brain(cfg["hf_name"])
+    enc_cfg = full_dir / "encoder_config"
+    model = Brain(cfg["hf_name"], local_config=enc_cfg)
+    if not enc_cfg.exists():  # cache it for offline use next time
+        model.enc.config.save_pretrained(enc_cfg)
     state = torch.load(full_dir / "model.pt", map_location="cpu", weights_only=True, mmap=True)
     state = {k: v for k, v in state.items() if not k.startswith("drops.")}
     model.load_state_dict(state, strict=True)

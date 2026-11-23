@@ -1,0 +1,6 @@
+# Demo + local inference (app/demo.py, src/infer.py, src/verify_model.py), on top of requirements.txt.
+# CPU PyTorch is enough. Windows/Linux: pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch
+transformers
+gradio
+joblib

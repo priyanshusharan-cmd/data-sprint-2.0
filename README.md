@@ -29,3 +29,12 @@ unweighted macro-F1, model budget <= 300M parameters at inference.
 |---|---|---|
 | TF-IDF + LinearSVC | 0.8733 | — |
 | TF-IDF + LinearSVC + augmentation | 0.8859 | — |
+
+## Run the demo on another machine (no code changes needed)
+1. `git pull` (or clone) this repo.
+2. Get `dataspint_model_bundle_v007.zip` (1.2 GB, shared privately inside the team; never public) and unzip it **into the repo root**. It creates `runs/hing_full/` (HingRoBERTa brain, tokenizer, offline config) and `runs/tfidf_aug/full/` (TF-IDF model).
+3. Python 3.10+:
+   - Windows: `python -m venv .venv` → `.venv\Scripts\python.exe -m pip install -r requirements.txt` → `.venv\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cpu` → `.venv\Scripts\python.exe -m pip install -r requirements-demo.txt`
+   - macOS: `python3 -m venv .venv` → `.venv/bin/pip install -r requirements.txt -r requirements-demo.txt`
+4. Check: `python src/infer.py --check` → must print `reproduces v007_final-hingfull+tfidf.csv: 100.0000% identical` and 287,378,288 params.
+5. Demo: `python app/demo.py` → http://127.0.0.1:7860 (fonts need internet; the model runs offline).

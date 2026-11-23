@@ -30,7 +30,10 @@ TOP_FRAC = 0.25  # share of train rows kept as the test-like exam
 # Public LB ~= tuned test-like macro-F1 - LB_OFFSET. Real submissions so far (test-like -> public LB):
 #   v002 TF-IDF raw 0.8724 -> 0.81230 (0.060)   v003 MuRIL fold0 tuned 0.8831 -> 0.81917 (0.064)
 #   v005 full MuRIL + TF-IDF tuned 0.9086 -> 0.84464 (0.064)
-# The two tuned pipelines (what postprocess/assemble print) agree on 0.064. Treat estimates as +-0.01.
+#   v007 full HingRoBERTa + TF-IDF tuned 0.9191 -> 0.86786 (0.051)
+# The gap depends on the encoder: the MuRIL pipelines agree on 0.064, HingRoBERTa transferred to the real test
+# better than the proxy predicted (0.051). The proxy ranked v007 above v005 correctly; keep 0.064 as the
+# conservative default and trust the ranking more than the exact number.
 LB_OFFSET = 0.064
 
 

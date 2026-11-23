@@ -29,8 +29,10 @@ from verify_model import load as load_encoder  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 OOS = 55
 PARAM_CAP = 300_000_000
-DEFAULT = {"encoder": "runs/muril_full/full", "tfidf": "runs/tfidf_aug/full/tfidf.joblib",
-           "rule": "submissions/v005_final-murilfull+tfidf.json", "knn": False}
+# v007 (public LB 0.86786): HingRoBERTa + TF-IDF. v005 (0.84464): encoder runs/muril_full/full,
+# rule submissions/v005_final-murilfull+tfidf.json
+DEFAULT = {"encoder": "runs/hing_full/full", "tfidf": "runs/tfidf_aug/full/tfidf.joblib",
+           "rule": "submissions/v007_final-hingfull+tfidf.json", "knn": False}
 
 
 def build_tfidf(out_path):
@@ -55,6 +57,8 @@ class IntentPipeline:
             torch.set_num_threads(threads)
         self.encoder, self.tok, cfg = load_encoder(ROOT / encoder)
         self.max_len = cfg["max_len"]
+        self.encoder_name = {"google/muril-base-cased": "MuRIL",
+                             "l3cube-pune/hing-roberta-mixed": "HingRoBERTa"}.get(cfg["hf_name"], cfg["hf_name"])
         tpath = ROOT / tfidf
         self.tf = joblib.load(tpath) if tpath.exists() else build_tfidf(tpath)
         r = json.loads((ROOT / rule).read_text())
@@ -120,15 +124,17 @@ def main():
     ap.add_argument("text", nargs="?")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--knn", action="store_true")
+    ap.add_argument("--encoder", default=DEFAULT["encoder"])
+    ap.add_argument("--rule", default=DEFAULT["rule"])
     a = ap.parse_args()
     t0 = time.perf_counter()
-    pipe = IntentPipeline(knn=a.knn)
+    pipe = IntentPipeline(encoder=a.encoder, rule=a.rule, knn=a.knn)
     print(f"loaded in {time.perf_counter() - t0:.1f}s | params {pipe.params}")
     if a.text:
         print(pipe.predict(a.text))
     if a.check:
         te = pd.read_csv(ROOT / "data/test.csv")
-        ref = ROOT / ("submissions/v006_final-murilfull+tfidf+knn.csv" if a.knn else "submissions/v005_final-murilfull+tfidf.csv")
+        ref = ROOT / ("submissions/v006_final-murilfull+tfidf+knn.csv" if a.knn else Path(a.rule).with_suffix(".csv"))
         sub = pd.read_csv(ref)
         mine = pipe.predict_batch(te.query_text.tolist())
         print(f"reproduces {ref.name}: {np.mean(mine == sub.target.values):.4%} identical "

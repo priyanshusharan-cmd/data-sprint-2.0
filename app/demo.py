@@ -189,9 +189,9 @@ def build(pipe, hints, examples):
                     chips = [gr.Button(ex) for ex in examples]
                 gr.HTML(
                     "<div class='facts'>"
-                    f"<p><strong>Model.</strong> MuRIL ({p['encoder']:,} parameters) and a character TF-IDF classifier "
+                    f"<p><strong>Model.</strong> {pipe.encoder_name} ({p['encoder']:,} parameters) and a character TF-IDF classifier "
                     f"({p['tfidf_svm']:,}) vote on each query; total {p['total']:,}.</p>"
-                    "<p><strong>Accuracy.</strong> Macro-F1 0.915 in 5-fold cross-validation, 0.84464 on the public "
+                    "<p><strong>Accuracy.</strong> Macro-F1 0.917 in 5-fold cross-validation, 0.86786 on the public "
                     "leaderboard.</p>"
                     "<p><strong>Fallback.</strong> When no action is confident enough, the answer is class 55.</p></div>")
         reveal = ("() => { if (window.innerWidth < 900) document.querySelector('.ans')"

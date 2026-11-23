@@ -35,6 +35,11 @@ Submission files: `submissions/v001_tfidf.csv`, `submissions/v002_tfidf-aug.csv`
 | **MuRIL lr 6e-5, llrd 0.95, 10 ep** (`--run muril_lr6`), fold 0 | 0.885 | 0.874 | 0.888 | **v003 = 0.81917** |
 | blend MuRIL fold0 0.4 + TF-IDF 0.6 (`--search`) | — | — | 0.9115 (fold-0 rows) | v004, **not submitted** |
 | **v005 = full MuRIL + full TF-IDF 0.5/0.5** (compliant 246.9M, tuned on 5-fold OOF) | — | — | 0.9150 (test-like 0.9086) | **0.84464** (#2 on 23 Nov, #1 0.84686) |
+| MuRIL + clean pseudo-labels (fold 0, leak-free teacher) | 0.886 | 0.878 | test-like 0.8745 (worse) | dropped |
+| HingRoBERTa `--lr 5e-5 --llrd 0.95 --epochs 10` (`hing_lr5`), 5 folds | folds 0.889/0.895/0.902/0.896/0.885 | | OOF 0.8962, test-like 0.9041 | |
+| **v007 = full HingRoBERTa + full TF-IDF 0.5/0.5** (compliant 287,378,288) | — | — | 0.9169 (test-like 0.9191) | **0.86786 (#1 on 23 Nov)** |
+- **Final picks: v007 + v005.** Demo and `src/infer.py` default to v007 (end-to-end p50 ~26 ms, max ~47 ms on laptop CPU).
+- MuRIL + HingRoBERTa + TF-IDF would reach test-like 0.922 (+0.003) but needs vocabulary trimming to fit 300M; not worth it.
 - **MuRIL 5-fold (`muril_lr6`)**: folds 0.879 / 0.894 / 0.893 / 0.888 / 0.876; OOF 0.8909 (tuned 0.8927, test-like est. LB ~0.827).
 - **MuRIL + TF-IDF 0.5/0.5, 5-fold OOF**: raw 0.9115 → tuned 0.9150; test-like est. LB **~0.848** (best real 0.819). `src/assemble.py` builds the compliant version from the full-data models (246,890,864 params).
 - MuRIL needs a higher LR than the defaults; ~63 s/epoch on T4, still creeping up at epoch 10.
