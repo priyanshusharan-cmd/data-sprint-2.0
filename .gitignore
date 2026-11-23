@@ -1,0 +1,9 @@
+.venv/
+data/
+submissions/
+__pycache__/
+.DS_Store
+*.onnx
+models/
+repo/
+runs/
