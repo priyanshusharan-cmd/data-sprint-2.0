@@ -20,7 +20,7 @@ unweighted macro-F1, model budget <= 300M parameters at inference.
 | `src/postprocess.py` | blend runs, tune class-55 threshold + per-class bias on OOF, write submission / pseudo-labels |
 
 ## Workflow
-1. **Kaggle (GPU):** import `kaggle/train_runner.ipynb`, set `MODEL`, Save & Run All (commit). Download `runs_<model>.zip`.
+1. **Kaggle (GPU):** import `kaggle/train_runner.ipynb`, set `MODEL`, Save & Run All (commit). Download `runs_all.zip`.
 2. **Mac (CPU):** unzip into `runs/`, then `python src/postprocess.py runs/muril runs/hingroberta`.
 3. Upload `submissions/*.csv` to Kaggle.
 

@@ -55,7 +55,7 @@ Only one 238–278M model fits under 300M, so a multi-model blend must be **dist
 1. GitHub fine-grained token, this repo only, Contents read-only → Kaggle notebook **Add-ons → Secrets → `GITHUB_TOKEN`**.
 2. Import `kaggle/train_runner.ipynb`; Settings: GPU T4 x2 / P100, Internet On; set `MODEL`.
 3. **Save Version → Save & Run All (Commit)**: runs server-side, survives disconnects (~35–45 min per model).
-4. Progress: version log shows per-epoch JSON (`val_clean`, `val_shift`). Results: download `runs_<model>.zip` → unzip into `runs/` locally.
+4. Progress: version log shows per-epoch JSON (`val_clean`, `val_shift`). Results: download `runs_all.zip` → unzip into the repo root (it contains `runs/<run>/`).
 5. Interrupted? Add the previous version's output as Input and commit again; finished folds are skipped.
 6. One model per notebook; run MuRIL and HingRoBERTa in parallel copies.
 
