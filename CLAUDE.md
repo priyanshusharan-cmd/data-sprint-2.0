@@ -34,6 +34,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # + torch t
 | Full-data model for demo | `python kaggle/train.py --model muril --full --epochs N` | Kaggle |
 | Blend + tune + submission | `.venv/bin/python src/postprocess.py runs/muril runs/hingroberta [--pseudo 0.92]` | Mac |
 | **Final compliant submission** (1 MuRIL + 1 TF-IDF, tuned on 5-fold OOF, param assert) | `python src/assemble.py --oof runs/muril_lr6 runs/tfidf_aug --full runs/muril_full/full runs/tfidf_aug/full` | any |
+| **Reproducible notebook for judges** (rebuild v007 end to end) | `python tools/build_repro_notebook.py` → `kaggle/reproduce_v007.ipynb` | Kaggle (GPU) |
 | Freeze + register a submission (validate, version, quota, LB) | `python src/subtrack.py add <csv> --stage <name>` / `submitted vNNN` / `lb vNNN <score>` / `list` | any |
 | Smoke test trainer on CPU | `.venv/bin/python kaggle/train.py --model e5small --limit 400 --epochs 1 --n_folds 2 --folds 0 --run smoke` | Mac |
 

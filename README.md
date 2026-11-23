@@ -30,6 +30,14 @@ unweighted macro-F1, model budget <= 300M parameters at inference.
 | TF-IDF + LinearSVC | 0.8733 | — |
 | TF-IDF + LinearSVC + augmentation | 0.8859 | — |
 
+## Final submission and how to reproduce it
+- **v007 = HingRoBERTa-mixed (fine-tuned) + character TF-IDF/LinearSVC, 50/50**, 287,378,288 parameters, public LB **0.86786**.
+- **`kaggle/reproduce_v007.ipynb`**: one self-contained Kaggle notebook (GPU + Internet on, competition data attached,
+  ~25 min Run All). It embeds the exact source files, retrains TF-IDF and HingRoBERTa from `train.csv`, applies the
+  frozen 5-fold-tuned rule, writes `submission.csv`, asserts the 300M cap and reports agreement with our v007 file.
+  Regenerate it after code changes with `python tools/build_repro_notebook.py`.
+- Full story of what we tried, kept and dropped: [`docs/JOURNEY.md`](docs/JOURNEY.md).
+
 ## Run the demo on another machine (no code changes needed)
 1. `git pull` (or clone) this repo.
 2. Get `dataspint_model_bundle_v007.zip` (1.2 GB, shared privately inside the team; never public) and unzip it **into the repo root**. It creates `runs/hing_full/` (HingRoBERTa brain, tokenizer, offline config) and `runs/tfidf_aug/full/` (TF-IDF model).

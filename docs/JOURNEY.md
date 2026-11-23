@@ -31,6 +31,8 @@ test is 64% Roman-script Hinglish**, and test wording is more casual and English
 | Nearest-neighbour vote over training rows | +0.002 validation, +0.003 practice exam, but active on only 15% of test rows; changed 16 of 4,912 test answers | Kept as v006, not uploaded (gain below leaderboard noise) |
 | Separate class-55 detector / bigger per-class bias tuning | Tuned threshold came out at 0; biases add ~0.003 | Kept the simple rule |
 | MuRIL + HingRoBERTa + TF-IDF together | Practice exam 0.9220 (+0.003 over v007) but 515.7M params; would need vocabulary trimming to fit 300M | Not worth the complexity and demo risk |
+| Three-model "compact challenger" (separate experiment): v007, but when its top-2 gap < 0.25 a 35/35/30 vote with a vocabulary-trimmed MuRIL; 298.9M params | Validation 0.9169 → 0.9197, practice exam 0.9191 → 0.9237, but the routing rule was tuned on the same rows; 44–70 ms per query. **Uploaded once: public 0.85605 (v007: 0.86786)** | Dropped; confirms that gains tuned on the evaluation rows don't transfer |
+| HingRoBERTa trained 14 epochs instead of 10 (best / final / average of epochs 12–14), folds 1–2 | Fold 1 blended practice exam up to +0.008, fold 2 down on every variant (−0.002 to −0.005) even though HingRoBERTa alone improved | Dropped; failed the "must win on both folds" rule |
 | HingRoBERTa + TF-IDF with more weight on HingRoBERTa (60/40 … 80/20) | All lower than 50/50 | 50/50 |
 | int8 quantisation for demo speed | No speed gain, changed 15% of answers | Rejected; used ONNX Runtime instead (identical answers) |
 | Hindi-script-only TF-IDF, E5 reranker (from an external audit) | Lower, or over the parameter cap | Rejected |
