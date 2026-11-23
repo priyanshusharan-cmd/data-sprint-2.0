@@ -4,3 +4,4 @@ v002,2026-11-23 09:06:57,tfidf-aug,v002_tfidf-aug.csv,2f644bb,0,60e084c9993a,0.8
 v003,2026-11-23 10:34:56,muril-lr6-fold0,v003_muril-lr6-fold0.csv,3ffbb27,1,fa57a3ee4734,0.8878,0.072,2026-11-23 10:48:56,0.81917,"MuRIL lr6e-5 llrd.95 10ep, fold0 only, tau+bias on fold0 OOF"
 v004,2026-11-23 10:53:15,muril-fold0+tfidf,v004_muril-fold0+tfidf.csv,3ffbb27,1,2580100587ae,0.9115,0.073,,,"blend w=[0.4 muril,0.6 tfidf] searched on fold0 OOF; TF-IDF temp 4.5"
 v005,2026-11-23 12:51:51,final-murilfull+tfidf,v005_final-murilfull+tfidf.csv,c0ca32f,0,a20b8003c573,0.9150,0.075,2026-11-23 14:04:01,0.84464,"COMPLIANT 246.9M: full MuRIL + full TF-IDF 0.5/0.5, tuned on 5-fold OOF; est LB 0.848"
+v006,2026-11-23 14:24:02,final-murilfull+tfidf+knn,v006_final-murilfull+tfidf+knn.csv,1757b7b,1,83f361ff154e,0.9171,0.075,,,"v005 + neighbour vote (0.75/0.25): OOF 0.9171, test-like 0.9116; changes 16/4912 test rows; NOT submitted"
