@@ -25,7 +25,7 @@ Last updated: 23 Nov 2026. Leaderboard at that time: top public score 0.837 (5 t
 | phonetic features + romanized copies | 0.922 |
 | TF-IDF baseline, 5-fold CV | 0.8733 |
 | TF-IDF + augmentation (2 views/row), 5-fold CV | **0.8859** (Roman rows 0.904 → 0.931) |
-Submission files: `submissions/baseline_tfidf.csv`, `submissions/baseline_tfidf_aug.csv` (not yet LB-scored).
+Submission files: `submissions/v001_tfidf.csv`, `submissions/v002_tfidf-aug.csv` (not yet LB-scored). All scores live in `submissions/registry.csv`.
 
 ## 3. Model choice (`analysis/model_scan.py` + literature)
 | model | params | tokens/word dev / roman | decision |
@@ -59,8 +59,16 @@ Only one 238–278M model fits under 300M, so a multi-model blend must be **dist
 5. Interrupted? Add the previous version's output as Input and commit again; finished folds are skipped.
 6. One model per notebook; run MuRIL and HingRoBERTa in parallel copies.
 
+## 5b. Submission versioning (`src/subtrack.py`, Kaggle limit 5/day, resets 00:00 UTC = 05:30 IST)
+Every candidate goes through the registry; never upload a raw `postprocess.py` output (it is overwritten on each run).
+1. Commit the code first (the registry records the commit hash and flags uncommitted `src/ kaggle/ analysis/` changes as `dirty=1`).
+2. `subtrack.py add <csv> --stage <name> --note "..."`: validates ids/targets against `data/test.csv`, refuses duplicates, freezes it as `submissions/vNNN_<stage>.csv` (+ sidecar `.json`, OOF F1 read from it).
+3. Upload that `vNNN` file on Kaggle → `subtrack.py submitted vNNN` (checks the daily quota, tags `sub-vNNN` on the commit) → `subtrack.py lb vNNN <score>`.
+4. Commit `submissions/` and `git push origin main --tags`. `subtrack.py list` shows everything; pick the 2 final submissions from it.
+Only `vNNN_*` files and `registry.csv` are tracked in `submissions/`; everything else there is gitignored scratch.
+
 ## 6. Next steps, in order
-1. Upload `submissions/baseline_tfidf_aug.csv`; record the public LB score in README.
+1. Upload `submissions/v002_tfidf-aug.csv`; `subtrack.py submitted v002`, then `subtrack.py lb v002 <score>`.
 2. Run MuRIL (5 folds) and HingRoBERTa-mixed (5 folds) on Kaggle.
 3. `postprocess.py runs/muril`, `runs/hingroberta`, and the blend; submit the best; compare LB vs `val_shift` to calibrate how much CV over-estimates.
 4. Pseudo-label round 1 with the blend (threshold ~0.92), retrain the better model with `--pseudo`.

@@ -5,3 +5,8 @@ __pycache__/
 models/
 repo/
 runs/
+# raw outputs of baseline/postprocess are scratch; only frozen versions + registry are kept
+submissions/*
+!submissions/v*.csv
+!submissions/v*.json
+!submissions/registry.csv
