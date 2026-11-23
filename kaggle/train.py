@@ -21,6 +21,7 @@ Outputs per fold:  val_idx.npy  val_logits.npy  test_logits.npy  test_emb.npy  m
 """
 import argparse
 import json
+import os
 import random
 import subprocess
 import sys
@@ -290,9 +291,10 @@ def main():
     if a.limit:
         tr = tr.sample(a.limit, random_state=a.seed).reset_index(drop=True); te = te.head(a.limit)
     try:
-        commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], text=True).strip()
+        commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], text=True,
+                                         stderr=subprocess.DEVNULL).strip()
     except Exception:
-        commit = "unknown"
+        commit = os.environ.get("GIT_COMMIT", "unknown")  # code shipped as an archive (Kaggle CLI runner)
     cfg = {**vars(a), "hf_name": name, "commit": commit, "device": str(dev), "data": str(data)}
     (out_root / "config.json").write_text(json.dumps(cfg, indent=2))
     print(json.dumps(cfg), flush=True)
