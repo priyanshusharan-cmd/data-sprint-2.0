@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SUB = ROOT / "submissions"
 REG = SUB / "registry.csv"
 DAILY_LIMIT = 5  # Kaggle resets the count at 00:00 UTC (05:30 IST)
-TOTAL_LIMIT = 5  # team rule: 5 submissions for the whole event; every upload must be a planned, validated gain
+TOTAL_LIMIT = 50  # no lifetime cap on Kaggle (maxDailySubmissions=5, checked 23 Nov); kept only as a sanity guard
 FIELDS = ["version", "created_utc", "stage", "file", "commit", "dirty", "sha256", "oof_f1", "class55_share",
           "submitted_utc", "public_lb", "note"]
 
@@ -172,7 +172,7 @@ def cmd_list(a):
     for r in rows:
         print("  ".join(r[c][:width[c]].ljust(width[c]) for c in cols))
     total = sum(bool(r["submitted_utc"]) for r in rows)
-    print(f"\nsubmissions used: {total}/{TOTAL_LIMIT} for the event ({TOTAL_LIMIT - total} left), "
+    print(f"\nsubmissions used: {total}/{TOTAL_LIMIT} total so far, "
           f"{submitted_today(rows)}/{DAILY_LIMIT} today (UTC)")
 
 

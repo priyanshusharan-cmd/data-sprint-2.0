@@ -4,7 +4,7 @@ Train-time augmentations that move the training distribution towards the test di
 Measured shift (analysis/eda.py):
   * script flip: train 61% Devanagari / 33% Roman, test 33% Devanagari / 64% Roman
   * colloquial register in test only (bhai / please / na / jaldi / hey ~3% of rows each, ~0 in train)
-  * digits in test ("convert 5 pm ist to pst"), none in train
+  * digits appear in test text (1.3% of rows), none in train
   * ASR-style spellings ("mjhe", "volyoom")
 
 All functions are deterministic given an `rng`, rule-based, and use no external data or LLMs.

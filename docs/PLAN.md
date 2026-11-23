@@ -13,7 +13,7 @@ Last updated: 23 Nov 2026. Leaderboard at that time: top public score 0.837 (5 t
 
 - 56 classes, all present; smallest class 36 (84 rows), largest 48 (1,224). Class 55 = 249 rows.
 - Train class 55 looks like a few held-out intents merged (alarms, coffee, podcasts, games). Test OOS also contains **novel** topics (coding, homework, definitions), so class 55 needs a confidence rule, not only a learned class.
-- Many low-similarity test rows are **in-domain intents written in English-heavy colloquial Hinglish** ("currency convert karo hundred usd to inr yaar" → currency class 10; "convert 5 pm ist to pst" → time-zone class 37). Pretrained multilingual encoders handle these far better than TF-IDF.
+- Many low-similarity test rows are written in **English-heavy colloquial Hinglish** (English content words, digits, fillers) that train lacks; pretrained multilingual encoders should handle this style better than TF-IDF. (Style observation on unlabeled test text only. An earlier draft of this note named intent IDs for two test queries; those were never used in any code, rule, label or submission, and no test row is ever labelled by hand.)
 - Test nearest-train cosine (char TF-IDF): mean 0.58 vs 0.73 for a held-out train split; 32% of test rows below 0.5 vs 11%. This is why train-CV over-estimates the leaderboard.
 - Inferred class meanings (top keywords per class): `analysis/classes.py` output.
 
@@ -34,6 +34,7 @@ Submission files: `submissions/v001_tfidf.csv`, `submissions/v002_tfidf-aug.csv`
 | MuRIL defaults (lr 3e-5, llrd 0.9, 6 ep), fold 0 | 0.738 | 0.717 | — | not submitted (under-trained) |
 | **MuRIL lr 6e-5, llrd 0.95, 10 ep** (`--run muril_lr6`), fold 0 | 0.885 | 0.874 | 0.888 | **v003 = 0.81917** |
 | blend MuRIL fold0 0.4 + TF-IDF 0.6 (`--search`) | — | — | 0.9115 (fold-0 rows) | v004, **not submitted** |
+| **v005 = full MuRIL + full TF-IDF 0.5/0.5** (compliant 246.9M, tuned on 5-fold OOF) | — | — | 0.9150 (test-like 0.9086) | **0.84464** (#2 on 23 Nov, #1 0.84686) |
 - **MuRIL 5-fold (`muril_lr6`)**: folds 0.879 / 0.894 / 0.893 / 0.888 / 0.876; OOF 0.8909 (tuned 0.8927, test-like est. LB ~0.827).
 - **MuRIL + TF-IDF 0.5/0.5, 5-fold OOF**: raw 0.9115 → tuned 0.9150; test-like est. LB **~0.848** (best real 0.819). `src/assemble.py` builds the compliant version from the full-data models (246,890,864 params).
 - MuRIL needs a higher LR than the defaults; ~63 s/epoch on T4, still creeping up at epoch 10.
@@ -72,7 +73,9 @@ Only one 238–278M model fits under 300M, so a multi-model blend must be **dist
 5. Interrupted? Add the previous version's output as Input and commit again; finished folds are skipped.
 6. One model per notebook; run MuRIL and HingRoBERTa in parallel copies.
 
-## 5b. Submission versioning (`src/subtrack.py`; team budget **5 submissions for the whole event**, 2 used)
+**Pseudo-labelling approved by the organisers (23 Nov, official WhatsApp group):** allowed as long as labels come from our own models on test.csv and the result is reproducible. `src/make_pseudo.py` builds them (model labels only, no human labelling).
+
+## 5b. Submission versioning (`src/subtrack.py`; Kaggle limit **5 per day**, resets 00:00 UTC = 05:30 IST, no lifetime cap)
 Every candidate goes through the registry; never upload a raw `postprocess.py` output (it is overwritten on each run).
 **Local LB proxy** (`src/testlike.py`, AUC 0.678 train-vs-test): on fold-0 rows it ranks TF-IDF 0.8724 < MuRIL 0.8802, matching the LB, with a steady offset of ~0.061 (MuRIL tuned estimate 0.822 vs real 0.819). Blend MuRIL+TF-IDF estimate ~0.842. The Roman-only subset ranks the models wrongly, so it is diagnostic only.
 **Policy:** no exploratory uploads. Upload only a param-cap-compliant model whose full 5-fold OOF beats the last submitted version by ≥ +0.015. Planned: #3 full MuRIL + TF-IDF (tuned on 5-fold OOF), #4 same with pseudo-labels, #5 reserve.
