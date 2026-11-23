@@ -18,6 +18,7 @@ Read `docs/PLAN.md` first: it has the pipeline stages, what is done, what is nex
 ## Git conventions (team decision)
 - Commit with **your own git identity**. **Never add `Co-Authored-By: Claude` or any Claude/AI attribution** to commits or descriptions. Claude must not appear in the contributor list.
 - Push **directly to `main`**. No pull requests.
+- Exception: a second teammate experiments on their own branch `exp/<name>` (fetched from `main`, rebased on it often) so runs don't clash; the Kaggle notebook's `BRANCH` setting picks which branch is trained. Winning changes are merged into `main` by the owner. Never push to someone else's branch.
 
 ## Setup
 ```bash

@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SUB = ROOT / "submissions"
 REG = SUB / "registry.csv"
 DAILY_LIMIT = 5  # Kaggle resets the count at 00:00 UTC (05:30 IST)
+TOTAL_LIMIT = 5  # team rule: 5 submissions for the whole event; every upload must be a planned, validated gain
 FIELDS = ["version", "created_utc", "stage", "file", "commit", "dirty", "sha256", "oof_f1", "class55_share",
           "submitted_utc", "public_lb", "note"]
 
@@ -133,6 +134,9 @@ def cmd_submitted(a):
     r = find(rows, a.version)
     if r["submitted_utc"]:
         sys.exit(f"{r['version']} already marked submitted at {r['submitted_utc']} UTC")
+    total = sum(bool(x["submitted_utc"]) for x in rows)
+    if total >= TOTAL_LIMIT and not a.force:
+        sys.exit(f"all {TOTAL_LIMIT} event submissions used ({total}). Not marking {r['version']}.")
     used = submitted_today(rows)
     if used >= DAILY_LIMIT and not a.force:
         sys.exit(f"{used}/{DAILY_LIMIT} submissions already used today (UTC). Quota resets 00:00 UTC = 05:30 IST.")
@@ -141,7 +145,8 @@ def cmd_submitted(a):
     tag = f"sub-{r['version']}"
     if r["commit"] and not git("tag", "-l", tag):
         git("tag", "-a", tag, r["commit"], "-m", f"{r['version']} {r['stage']} {r['file']}")
-    print(f"{r['version']} marked submitted ({used + 1}/{DAILY_LIMIT} today, UTC). Tag {tag} -> {r['commit']}.")
+    print(f"{r['version']} marked submitted ({total + 1}/{TOTAL_LIMIT} for the event, {used + 1}/{DAILY_LIMIT} today UTC). "
+          f"Tag {tag} -> {r['commit']}.")
     print(f"when Kaggle shows the score: python src/subtrack.py lb {r['version']} <score>")
 
 
@@ -166,7 +171,9 @@ def cmd_list(a):
     print("  ".join(c.ljust(width[c]) for c in cols))
     for r in rows:
         print("  ".join(r[c][:width[c]].ljust(width[c]) for c in cols))
-    print(f"\nsubmitted today (UTC): {submitted_today(rows)}/{DAILY_LIMIT}")
+    total = sum(bool(r["submitted_utc"]) for r in rows)
+    print(f"\nsubmissions used: {total}/{TOTAL_LIMIT} for the event ({TOTAL_LIMIT - total} left), "
+          f"{submitted_today(rows)}/{DAILY_LIMIT} today (UTC)")
 
 
 def cmd_show(a):

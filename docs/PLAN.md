@@ -25,7 +25,18 @@ Last updated: 23 Nov 2026. Leaderboard at that time: top public score 0.837 (5 t
 | phonetic features + romanized copies | 0.922 |
 | TF-IDF baseline, 5-fold CV | 0.8733 |
 | TF-IDF + augmentation (2 views/row), 5-fold CV | **0.8859** (Roman rows 0.904 → 0.931) |
-Submission files: `submissions/v001_tfidf.csv`, `submissions/v002_tfidf-aug.csv` (not yet LB-scored). All scores live in `submissions/registry.csv`.
+Submission files: `submissions/v001_tfidf.csv`, `submissions/v002_tfidf-aug.csv`. All scores live in `submissions/registry.csv`.
+
+## 2b. GPU results + leaderboard (23 Nov)
+| run / version | val_clean | val_shift | OOF tuned | public LB |
+|---|---|---|---|---|
+| v002 TF-IDF + aug (5-fold) | 0.886 | — | — | 0.81230 |
+| MuRIL defaults (lr 3e-5, llrd 0.9, 6 ep), fold 0 | 0.738 | 0.717 | — | not submitted (under-trained) |
+| **MuRIL lr 6e-5, llrd 0.95, 10 ep** (`--run muril_lr6`), fold 0 | 0.885 | 0.874 | 0.888 | **v003 = 0.81917** |
+| blend MuRIL fold0 0.4 + TF-IDF 0.6 (`--search`) | — | — | 0.9115 (fold-0 rows) | v004, **not submitted** |
+- MuRIL needs a higher LR than the defaults; ~63 s/epoch on T4, still creeping up at epoch 10.
+- TF-IDF and MuRIL make different errors: blending added +0.02–0.03 OOF. `baseline.py --save_run runs/tfidf_aug` writes TF-IDF folds (same splits, temperature-scaled SVM margins).
+- **Param cap applies to what produces the submission**: 5-fold MuRIL average = 1.19B (not allowed). Allowed final: 1 full-data MuRIL (237,599,288) + 1 TF-IDF SVM (9,291,576 = 165,920 features × 56) = 246.9M. Fold runs and HingRoBERTa are training-time tools only (OOF tuning, pseudo-label teachers).
 
 ## 3. Model choice (`analysis/model_scan.py` + literature)
 | model | params | tokens/word dev / roman | decision |
@@ -59,8 +70,9 @@ Only one 238–278M model fits under 300M, so a multi-model blend must be **dist
 5. Interrupted? Add the previous version's output as Input and commit again; finished folds are skipped.
 6. One model per notebook; run MuRIL and HingRoBERTa in parallel copies.
 
-## 5b. Submission versioning (`src/subtrack.py`, Kaggle limit 5/day, resets 00:00 UTC = 05:30 IST)
+## 5b. Submission versioning (`src/subtrack.py`; team budget **5 submissions for the whole event**, 2 used)
 Every candidate goes through the registry; never upload a raw `postprocess.py` output (it is overwritten on each run).
+**Policy:** no exploratory uploads. Upload only a param-cap-compliant model whose full 5-fold OOF beats the last submitted version by ≥ +0.015. Planned: #3 full MuRIL + TF-IDF (tuned on 5-fold OOF), #4 same with pseudo-labels, #5 reserve.
 1. Commit the code first (the registry records the commit hash and flags uncommitted `src/ kaggle/ analysis/` changes as `dirty=1`).
 2. `subtrack.py add <csv> --stage <name> --note "..."`: validates ids/targets against `data/test.csv`, refuses duplicates, freezes it as `submissions/vNNN_<stage>.csv` (+ sidecar `.json`, OOF F1 read from it).
 3. Upload that `vNNN` file on Kaggle → `subtrack.py submitted vNNN` (checks the daily quota, tags `sub-vNNN` on the commit) → `subtrack.py lb vNNN <score>`.
@@ -68,11 +80,11 @@ Every candidate goes through the registry; never upload a raw `postprocess.py` o
 Only `vNNN_*` files and `registry.csv` are tracked in `submissions/`; everything else there is gitignored scratch.
 
 ## 6. Next steps, in order
-1. Upload `submissions/v002_tfidf-aug.csv`; `subtrack.py submitted v002`, then `subtrack.py lb v002 <score>`.
-2. Run MuRIL (5 folds) and HingRoBERTa-mixed (5 folds) on Kaggle.
-3. `postprocess.py runs/muril`, `runs/hingroberta`, and the blend; submit the best; compare LB vs `val_shift` to calibrate how much CV over-estimates.
-4. Pseudo-label round 1 with the blend (threshold ~0.92), retrain the better model with `--pseudo`.
-5. Final model: `--full` on train + pseudo with the CV-best epoch count; pick 2 final submissions (Kaggle allows 2).
+1. MuRIL 5 folds `--lr 6e-5 --llrd 0.95 --epochs 10 --run muril_lr6` (owner's Kaggle). HingRoBERTa 5 folds `--lr 5e-5 --epochs 10 --run hing_lr5` (teammate's Kaggle, branch `exp/<name>`).
+2. MuRIL `--full` with the same flags (`--run muril_full`): weights for submission #3 and the demo.
+3. Final-assembly script (to build): full MuRIL test logits + one full-data TF-IDF SVM, weights/tau/bias from 5-fold OOF blend, param-count assert → submission #3.
+4. Pseudo-labels from the teacher blend (MuRIL folds + HingRoBERTa folds + TF-IDF, prob ≥ 0.92) → commit `data/pseudo_*.csv` → MuRIL `--full --pseudo /tmp/repo/data/pseudo_*.csv` → submission #4.
+5. Pick 2 final submissions from #3/#4.
 6. Demo track (parallel, needs the `--full` weights): ONNX + Gradio, measure latency on CPU.
 
 ## 7. Ideas not yet implemented (ranked by expected gain)

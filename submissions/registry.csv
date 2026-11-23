@@ -1,3 +1,5 @@
 version,created_utc,stage,file,commit,dirty,sha256,oof_f1,class55_share,submitted_utc,public_lb,note
 v001,2026-11-23 09:06:56,tfidf,v001_tfidf.csv,2f644bb,0,cf7e45d2c881,0.8733,0.070,,,"char TF-IDF + LinearSVC, no aug (5-fold CV)"
 v002,2026-11-23 09:06:57,tfidf-aug,v002_tfidf-aug.csv,2f644bb,0,60e084c9993a,0.8859,0.072,2026-11-23 09:08:46,0.81230,"TF-IDF + augmentation, 2 views/row (5-fold CV)"
+v003,2026-11-23 10:34:56,muril-lr6-fold0,v003_muril-lr6-fold0.csv,3ffbb27,1,fa57a3ee4734,0.8878,0.072,2026-11-23 10:48:56,0.81917,"MuRIL lr6e-5 llrd.95 10ep, fold0 only, tau+bias on fold0 OOF"
+v004,2026-11-23 10:53:15,muril-fold0+tfidf,v004_muril-fold0+tfidf.csv,3ffbb27,1,2580100587ae,0.9115,0.073,,,"blend w=[0.4 muril,0.6 tfidf] searched on fold0 OOF; TF-IDF temp 4.5"

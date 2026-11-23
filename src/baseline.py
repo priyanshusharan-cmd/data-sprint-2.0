@@ -3,7 +3,13 @@ CPU baseline: TF-IDF (char + word n-grams on raw text and on the phonetic key) +
 
     python src/baseline.py            # 5-fold CV macro-F1 + writes submissions/baseline_tfidf.csv
     python src/baseline.py --aug      # + test-style augmentation (romanize / colloquial / digits / ASR noise)
+    python src/baseline.py --aug --save_run runs/tfidf_aug   # also write fold outputs blendable by postprocess.py
+
+--save_run writes <dir>/fold{k}/{val_idx,val_logits,test_logits}.npy + metrics.json in the same format and with
+the same StratifiedKFold(5, shuffle, 42) splits as kaggle/train.py. SVM margins are scaled by one temperature
+fitted on OOF log-loss so that softmax gives usable probabilities for blending.
 """
+import json
 import random
 import sys
 from pathlib import Path
@@ -66,13 +72,36 @@ def main():
     te = prep(pd.read_csv(ROOT / "data/test.csv"))
     y = tr.target.values
 
+    save_run = Path(sys.argv[sys.argv.index("--save_run") + 1]) if "--save_run" in sys.argv else None
     oof = np.zeros(len(tr), dtype=int)
+    margins = np.zeros((len(tr), 56))
+    folds = []
     for k, (a, b) in enumerate(StratifiedKFold(5, shuffle=True, random_state=SEED).split(tr, y)):
         fit_df = with_aug(tr.iloc[a], SEED + k) if use_aug else tr.iloc[a]
-        Xa, (Xb,) = featurize(fit_df, [tr.iloc[b]])
+        Xa, (Xb, Xt) = featurize(fit_df, [tr.iloc[b], te] if save_run else [tr.iloc[b], te.iloc[:0]])
         clf = LinearSVC(C=0.5, class_weight="balanced").fit(Xa, fit_df.target.values)
-        oof[b] = clf.predict(Xb)
+        assert list(clf.classes_) == list(range(56))
+        margins[b] = clf.decision_function(Xb)
+        oof[b] = margins[b].argmax(1)
+        folds.append((b, clf.decision_function(Xt) if save_run else None))
         print(f"fold {k}: macro-F1 {f1_score(y[b], oof[b], average='macro'):.4f}", flush=True)
+
+    if save_run:
+        def nll(t):
+            z = margins * t
+            z = z - z.max(1, keepdims=True)
+            return float(np.mean(np.log(np.exp(z).sum(1)) - z[np.arange(len(y)), y]))
+        temp = min(np.arange(1, 41, 0.5), key=nll)
+        print(f"temperature {temp} (OOF NLL {nll(temp):.4f})")
+        for k, (b, tm) in enumerate(folds):
+            d = save_run / f"fold{k}"
+            d.mkdir(parents=True, exist_ok=True)
+            np.save(d / "val_idx.npy", b)
+            np.save(d / "val_logits.npy", (margins[b] * temp).astype(np.float32))
+            np.save(d / "test_logits.npy", (tm * temp).astype(np.float32))
+            (d / "metrics.json").write_text(json.dumps({"best_score": f1_score(y[b], oof[b], average="macro"),
+                                                       "temperature": temp, "aug": use_aug}))
+        print("wrote fold outputs to", save_run)
 
     print(f"CV macro-F1 {f1_score(y, oof, average='macro'):.4f}")
     for flag, name in [(True, "Devanagari"), (False, "Roman")]:

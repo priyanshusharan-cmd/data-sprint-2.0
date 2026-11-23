@@ -4,6 +4,7 @@ Blend fold outputs of one or more runs, tune the out-of-scope rule and per-class
     python src/postprocess.py runs/muril                       # one model
     python src/postprocess.py runs/muril runs/hingroberta      # blend (equal weights)
     python src/postprocess.py runs/muril runs/hingroberta --weights 0.6 0.4 --pseudo 0.92
+    python src/postprocess.py runs/muril_lr6 runs/tfidf_aug --search   # grid-search blend weights on OOF
 
 Each run dir holds fold{k}/{val_idx,val_logits,test_logits}.npy written by kaggle/train.py.
 """
@@ -68,6 +69,7 @@ def main():
     ap.add_argument("runs", nargs="+")
     ap.add_argument("--weights", type=float, nargs="*")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--search", action="store_true", help="grid-search blend weights (step 0.1) on OOF macro-F1")
     ap.add_argument("--pseudo", type=float, default=0.0, help="write confident test rows (prob >= this) for round 2")
     a = ap.parse_args()
     tr = pd.read_csv(ROOT / "data/train.csv"); te = pd.read_csv(ROOT / "data/test.csv")
@@ -76,6 +78,17 @@ def main():
     w = a.weights or [1.0] * len(a.runs)
     loaded = [load_run(r, len(tr)) for r in a.runs]
     mask = np.logical_and.reduce([c for _, _, c in loaded])
+    if a.search and len(a.runs) > 1:
+        import itertools
+        grid = [g for g in itertools.product(range(11), repeat=len(a.runs)) if sum(g) == 10]
+        def score(g):
+            o = sum(gi * l[0][mask] for gi, l in zip(g, loaded))
+            return f1_score(Y[mask], o.argmax(1), average="macro")
+        res = sorted(((score(g), g) for g in grid), reverse=True)
+        for sc, g in res[:5]:
+            print(f"  weights {[x / 10 for x in g]} -> OOF raw macro-F1 {sc:.4f}")
+        w = [x / 10 for x in res[0][1]]
+        print(f"search picked weights {w} on {mask.sum()} OOF rows")
     oof = sum(wi * o for wi, (o, _, _) in zip(w, loaded)) / sum(w)
     test = sum(wi * t for wi, (_, t, _) in zip(w, loaded)) / sum(w)
     p, y = oof[mask], Y[mask]
