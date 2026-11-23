@@ -180,7 +180,7 @@ def build(pipe, hints, examples):
         with gr.Row(elem_id="panes"):
             with gr.Column(scale=8, elem_id="left", min_width=0):
                 box = gr.Textbox(elem_id="query", show_label=False, lines=1, max_lines=3, autofocus=True,
-                                 placeholder="bhai kal subah ka alarm laga do")
+                                 placeholder=next((e for e in examples if not DEV.search(e)), "Type a query"))
                 btn = gr.Button("Route", elem_id="route")
                 out = gr.HTML(EMPTY)
             with gr.Column(scale=4, elem_id="right", min_width=0):

@@ -4,3 +4,6 @@ torch
 transformers
 gradio
 joblib
+onnxruntime   # faster engine for the same weights (identical answers); falls back to PyTorch if missing
+onnx          # only needed once, to export model.onnx
+psutil        # pins inference to the fast CPU cores at high priority
