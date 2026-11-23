@@ -4,6 +4,8 @@ CPU baseline: TF-IDF (char + word n-grams on raw text and on the phonetic key) +
     python src/baseline.py            # 5-fold CV macro-F1 + writes submissions/baseline_tfidf.csv
     python src/baseline.py --aug      # + test-style augmentation (romanize / colloquial / digits / ASR noise)
     python src/baseline.py --aug --save_run runs/tfidf_aug   # also write fold outputs blendable by postprocess.py
+    python src/baseline.py --aug --pseudo --save_run runs/tfidf_aug_ps   # + pseudo-labelled test rows
+      (fold k adds data/pseudo_f{k}_t92.csv, teacher = fold-k models only, which never saw fold k; the full fit adds pseudo_all_t92.csv)
 
 --save_run writes <dir>/fold{k}/{val_idx,val_logits,test_logits}.npy + metrics.json in the same format and with
 the same StratifiedKFold(5, shuffle, 42) splits as kaggle/train.py. SVM margins are scaled by one temperature
@@ -66,8 +68,14 @@ def with_aug(df, seed, copies=2):
     return prep(pd.concat(views, ignore_index=True))
 
 
+def add_pseudo(df, name):
+    ps = pd.read_csv(ROOT / f"data/{name}.csv")[["query_text", "target"]]
+    return pd.concat([df[["query_text", "target"]], ps], ignore_index=True)
+
+
 def main():
     use_aug = "--aug" in sys.argv
+    use_ps = "--pseudo" in sys.argv
     tr = prep(pd.read_csv(ROOT / "data/train.csv"))
     te = prep(pd.read_csv(ROOT / "data/test.csv"))
     y = tr.target.values
@@ -77,7 +85,8 @@ def main():
     margins = np.zeros((len(tr), 56))
     folds = []
     for k, (a, b) in enumerate(StratifiedKFold(5, shuffle=True, random_state=SEED).split(tr, y)):
-        fit_df = with_aug(tr.iloc[a], SEED + k) if use_aug else tr.iloc[a]
+        base = add_pseudo(tr.iloc[a], f"pseudo_f{k}_t92") if use_ps else tr.iloc[a]
+        fit_df = with_aug(base, SEED + k) if use_aug else prep(base)
         Xa, (Xb, Xt) = featurize(fit_df, [tr.iloc[b], te] if save_run else [tr.iloc[b], te.iloc[:0]])
         clf = LinearSVC(C=0.5, class_weight="balanced").fit(Xa, fit_df.target.values)
         assert list(clf.classes_) == list(range(56))
@@ -108,7 +117,8 @@ def main():
         m = tr.is_dev.values == flag
         print(f"  {name:10s} rows {m.sum():5d}  macro-F1 {f1_score(y[m], oof[m], average='macro'):.4f}")
 
-    fit_df = with_aug(tr, SEED) if use_aug else tr
+    base = add_pseudo(tr, "pseudo_all_t92") if use_ps else tr
+    fit_df = with_aug(base, SEED) if use_aug else prep(base)
     X, (Xt,) = featurize(fit_df, [te])
     clf = LinearSVC(C=0.5, class_weight="balanced").fit(X, fit_df.target.values)
     pred = clf.predict(Xt)

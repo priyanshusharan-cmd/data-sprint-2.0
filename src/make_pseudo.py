@@ -1,10 +1,11 @@
 """
 Pseudo-labels (semi-supervised self-training): our own models label the test queries they are very confident
 about; MuRIL is then retrained on train + those rows. Model-generated labels only: no human labelling of test rows,
-no external data. Use in a submission only if the organisers confirm it is allowed.
+no external data. Approved by the organisers (23 Nov) if fully automated and reproducible from our code.
 
-    # leak-free experiment for fold k: the teacher excludes every model that saw fold k's validation rows
-    python src/make_pseudo.py --runs runs/muril_lr6 runs/tfidf_aug --exclude_fold 0 --thresh 0.92
+    # leak-free experiment for fold k: the teacher is ONLY the fold-k models, the only ones that never saw
+    # fold k's validation rows (every other fold model was trained on them)
+    python src/make_pseudo.py --runs runs/muril_lr6 runs/tfidf_aug --only_fold 0 --thresh 0.92
     # final round: teacher = all folds
     python src/make_pseudo.py --runs runs/muril_lr6 runs/tfidf_aug --thresh 0.92
 
@@ -26,7 +27,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", nargs="+", required=True)
     ap.add_argument("--weights", type=float, nargs="*")
-    ap.add_argument("--exclude_fold", type=int, default=None)
+    ap.add_argument("--only_fold", type=int, default=None, help="teacher = fold-k models only (leak-free eval of fold k)")
     ap.add_argument("--thresh", type=float, default=0.92)
     a = ap.parse_args()
     te = pd.read_csv(ROOT / "data/test.csv")
@@ -34,7 +35,7 @@ def main():
     probs = 0
     for wi, r in zip(w, a.runs):
         folds = sorted(p for p in Path(r).glob("fold*") if (p / "metrics.json").exists()
-                       and p.name != f"fold{a.exclude_fold}")
+                       and (a.only_fold is None or p.name == f"fold{a.only_fold}"))
         assert folds, f"no usable folds in {r}"
         probs = probs + wi * np.mean([softmax(np.load(f / "test_logits.npy")) for f in folds], 0)
         print(f"{r}: teacher folds {[f.name for f in folds]}")
@@ -42,7 +43,7 @@ def main():
     conf, lab = probs.max(1), probs.argmax(1)
     keep = conf >= a.thresh
     rom = ~te.query_text.str.contains("[ऀ-ॿ]")
-    tag = ("ex%d_" % a.exclude_fold if a.exclude_fold is not None else "all_") + f"t{int(a.thresh * 100)}"
+    tag = ("f%d_" % a.only_fold if a.only_fold is not None else "all_") + f"t{int(a.thresh * 100)}"
     out = ROOT / f"data/pseudo_{tag}.csv"
     pd.DataFrame({"query_text": te.query_text[keep], "target": lab[keep], "weight": conf[keep].round(3)}).to_csv(out, index=False)
     print(f"kept {keep.sum()} / {len(te)} test rows (conf >= {a.thresh}) | classes covered {len(set(lab[keep]))}/56 | "
