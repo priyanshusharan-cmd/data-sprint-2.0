@@ -43,6 +43,11 @@ test is 64% Roman-script Hinglish**, and test wording is more casual and English
 - **Upload only what beats the best on 5-fold evidence.** Four uploads, each better than the last: 0.812 → 0.819 → 0.845 → 0.868.
 - **Respect the cap in the deployed model, not just the leaderboard file.** The demo runs the exact v007 pipeline: `src/infer.py --check` reproduces the submission 4,912/4,912.
 
+## Reproducibility
+`kaggle/reproduce_v007.ipynb` rebuilds v007 from the competition data alone. Run on a Kaggle T4 (24 Nov, 20.4 min):
+TF-IDF CV 0.8859 and temperature 4.5 as in our run, HingRoBERTa losses identical epoch by epoch, parameter check
+287,378,288, and the resulting `submission.csv` **100.00% identical to the submitted v007** (fixed seed 42).
+
 ## Demo engineering
 - Same pipeline as the submission (`src/infer.py`), offline on a laptop CPU.
 - ONNX Runtime with 6 threads pinned to the performance cores: p50 ~19 ms, ~0.17% of queries just over 50 ms (PyTorch: p50 ~27–35 ms, ~2% over).

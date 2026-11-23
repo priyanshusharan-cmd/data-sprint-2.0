@@ -216,7 +216,7 @@ def main():
     if a.limit:
         tr = tr.sample(a.limit, random_state=a.seed).reset_index(drop=True); te = te.head(a.limit)
     try:
-        commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], text=True).strip()
+        commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
     except Exception:
         commit = "unknown"
     cfg = {**vars(a), "hf_name": name, "commit": commit, "device": str(dev), "data": str(data)}
