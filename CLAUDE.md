@@ -1,7 +1,7 @@
 # Data Sprint 2.0 — NLP track (Anveshan, NIE Mysuru)
 
 Open-set intent classification of Hindi / Hinglish voice queries. Kaggle: https://www.kaggle.com/competitions/anveshan-data-sprint-2-nlp
-Read `docs/PLAN.md` first: it has the pipeline stages, what is done, what is next, and the measured findings.
+Read `docs/HANDOFF.md` first (current state, verified results, open decision, to-do), then `docs/PLAN.md` (pipeline stages and measured findings).
 
 ## Task essentials
 - 56 classes (0–54 intents, **55 = out of scope**), metric **unweighted macro-F1** (every class 1/56).
