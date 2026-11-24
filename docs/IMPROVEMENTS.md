@@ -68,3 +68,26 @@ text (pseudo-labels, which also use test text, were approved on 23 Nov).
 `kaggle/mlm_pretrain.py`, `src/noise_weights.py`, `src/postprocess.py --temps --group_vote --prior_em --stack`.
 Checked and not worth it: group voting over filler variants (v007 already answers them consistently: only 5 groups,
 17 test rows differ), more folds (the submitted model is the full-data one either way).
+
+## 24 Nov evening: what the public scores taught us, and candidate NEW-A
+Public results of every change so far, ordered by the TF-IDF share of the blend:
+
+| upload | TF-IDF weight | public | vs v007 |
+|---|---|---|---|
+| challenger (3-model, routed) | 0.30 | 0.85605 | -0.0118 |
+| v008 HingRoBERTa + MuRIL + TF-IDF | 0.35 | 0.85792 | -0.0099 |
+| v010 two HingRoBERTa + TF-IDF 1/1/1 | 0.33 | 0.86215 | -0.0057 |
+| v009 DAPT HingRoBERTa + TF-IDF | 0.50 | 0.86359 | -0.0043 |
+| **v007** HingRoBERTa + TF-IDF | 0.50 | **0.86786** | — |
+
+* A 974-row public comparison is noisy: on test-like OOF rows the spread of a two-model delta is sd 0.006, and a
+  truly better model loses on public 23% of the time. Single results are weak evidence; the pattern is the signal:
+  every blend that cut TF-IDF below half lost the most.
+* The test's predicted class mix tracks train (corr 0.99): no prior-shift trick is available.
+* Neighbour vote on v007 or NEW-A: slightly worse on fold 0 (dropped).
+
+**NEW-A** (`submissions/cand_A_2hing+tfidf-half.csv`): 0.25 v007 HingRoBERTa + 0.25 DAPT HingRoBERTa + 0.5 TF-IDF,
+v007's frozen rule, the two trimmed encoders of v010 (299,498,920 params). Fold-0 rows: 0.9095 (v007 0.9089),
+practice exam 0.9041 (v007 0.9000); 150 test answers differ from v007 (140 from v009, 127 from v010).
+Reproducible notebook: `kaggle/reproduce_candA.ipynb` (`tools/build_repro_v008.py --second dapt`).
+Upload decision: if NEW-A's public beats v009 (0.86359), it replaces v009 as the second final pick; v007 stays the first.
