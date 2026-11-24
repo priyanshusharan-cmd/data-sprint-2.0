@@ -91,3 +91,18 @@ v007's frozen rule, the two trimmed encoders of v010 (299,498,920 params). Fold-
 practice exam 0.9041 (v007 0.9000); 150 test answers differ from v007 (140 from v009, 127 from v010).
 Reproducible notebook: `kaggle/reproduce_candA.ipynb` (`tools/build_repro_v008.py --second dapt`).
 Upload decision: if NEW-A's public beats v009 (0.86359), it replaces v009 as the second final pick; v007 stays the first.
+
+**NEW-G** (`submissions/cand_G_geo-hing+tfidf.csv`): v007's exact two models (full HingRoBERTa + TF-IDF, 287,378,288
+params) combined by a geometric mean (average of log-probabilities) instead of an arithmetic mean; rule re-tuned on
+5-fold OOF with the assemble procedure (tau 0). 5-fold OOF 0.9185 (v007 0.9169), practice exam 0.9229 (v007 0.9191);
+practice exam better in 4/5 folds, all-rows better in 2/5; bootstrap P(better on practice exam) 0.93; 165 test answers
+differ from v007 (200 from NEW-A). Why it may transfer: an arithmetic mean lets an over-confident encoder outvote TF-IDF
+on unfamiliar casual Hinglish; a geometric mean gives TF-IDF a veto, in line with the TF-IDF pattern above.
+Same models, so if it wins **the demo can switch at no latency cost**: `src/infer.py` reads `"blend": "geometric"` from
+the rule file (pipeline maths verified to reproduce both v007 and NEW-G exactly). Reproducible notebook:
+`kaggle/reproduce_candG.ipynb` (Arsh's verified v007 notebook with only the rule and the blend line changed; its blend
+cell rebuilds NEW-G 100% from the saved logits). Built by `tools/build_repro_geo.py`.
+
+**Upload plan (2 uploads left today):** NEW-G first, then NEW-A. Final picks = v007 + the best public score among
+{NEW-G, NEW-A, v009}. If NEW-G beats v007 on public, the demo can switch to it (`python app/demo.py --rule
+submissions/<NEW-G registered json>`).

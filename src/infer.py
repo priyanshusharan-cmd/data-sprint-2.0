@@ -138,6 +138,7 @@ class IntentPipeline:
         assert len(r["weights"]) == len(self.encoders) + 1, "rule needs one weight per encoder + one for TF-IDF"
         self.w = np.array(r["weights"], dtype=float) / sum(r["weights"])
         self.tau, self.bias = r["tau"], np.array(r["bias"])
+        self.geometric = r.get("blend") == "geometric"  # average of log-probabilities instead of probabilities
         self.knn = None
         if knn:
             import neighbors as nb
@@ -174,9 +175,13 @@ class IntentPipeline:
         return list(self._pool.map(lambda e: e.logits(texts), self.encoders))
 
     def probs(self, texts):
-        p = self.w[-1] * self._softmax(self._tfidf_logits(texts))
-        for wi, lo in zip(self.w[:-1], self._encoder_logits(texts)):
-            p = p + wi * self._softmax(lo)
+        parts = self._encoder_logits(texts) + [self._tfidf_logits(texts)]
+        if self.geometric:
+            p = self._softmax(sum(wi * np.log(self._softmax(lo) + 1e-9) for wi, lo in zip(self.w, parts)))
+        else:
+            p = self.w[-1] * self._softmax(parts[-1])
+            for wi, lo in zip(self.w[:-1], parts[:-1]):
+                p = p + wi * self._softmax(lo)
         if self.knn is not None:
             import neighbors as nb
             kp, best = self.knn.query(texts)
