@@ -12,6 +12,7 @@ the same StratifiedKFold(5, shuffle, 42) splits as kaggle/train.py. SVM margins 
 fitted on OOF log-loss so that softmax gives usable probabilities for blending.
 """
 import json
+import os
 import random
 import sys
 from pathlib import Path
@@ -57,7 +58,7 @@ def prep(df):
     return df
 
 
-def with_aug(df, seed, copies=2):
+def with_aug(df, seed, copies=int(os.environ.get("TFIDF_COPIES", 2))):  # env override for experiments; default = v007
     """Training rows plus `copies` augmented views of each (labels kept)."""
     rng = random.Random(seed)
     views = [df[["query_text", "target"]]]
@@ -88,7 +89,7 @@ def main():
         base = add_pseudo(tr.iloc[a], f"pseudo_f{k}_t92") if use_ps else tr.iloc[a]
         fit_df = with_aug(base, SEED + k) if use_aug else prep(base)
         Xa, (Xb, Xt) = featurize(fit_df, [tr.iloc[b], te] if save_run else [tr.iloc[b], te.iloc[:0]])
-        clf = LinearSVC(C=0.5, class_weight="balanced").fit(Xa, fit_df.target.values)
+        clf = LinearSVC(C=float(os.environ.get("TFIDF_C", 0.5)), class_weight="balanced").fit(Xa, fit_df.target.values)
         assert list(clf.classes_) == list(range(56))
         margins[b] = clf.decision_function(Xb)
         oof[b] = margins[b].argmax(1)
@@ -120,7 +121,7 @@ def main():
     base = add_pseudo(tr, "pseudo_all_t92") if use_ps else tr
     fit_df = with_aug(base, SEED) if use_aug else prep(base)
     X, (Xt,) = featurize(fit_df, [te])
-    clf = LinearSVC(C=0.5, class_weight="balanced").fit(X, fit_df.target.values)
+    clf = LinearSVC(C=float(os.environ.get("TFIDF_C", 0.5)), class_weight="balanced").fit(X, fit_df.target.values)
     pred = clf.predict(Xt)
     if save_run:  # the single full-data SVM used at inference (param cap: coef_ + intercept_)
         d = save_run / "full"

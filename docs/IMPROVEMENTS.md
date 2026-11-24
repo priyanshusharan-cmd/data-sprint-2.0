@@ -106,3 +106,10 @@ cell rebuilds NEW-G 100% from the saved logits). Built by `tools/build_repro_geo
 **Upload plan (2 uploads left today):** NEW-G first, then NEW-A. Final picks = v007 + the best public score among
 {NEW-G, NEW-A, v009}. If NEW-G beats v007 on public, the demo can switch to it (`python app/demo.py --rule
 submissions/<NEW-G registered json>`).
+
+**TF-IDF variants inside the geometric blend** (5-fold, rule re-tuned each time; `TFIDF_COPIES`, `TFIDF_C`, `AUG_MODE`
+env overrides in `src/baseline.py`, defaults unchanged): 4 augmented copies OOF 0.9180 / practice 0.9200; C=1.0
+0.9191 / 0.9246; mined fillers 0.9173 / 0.9202; NEW-G (default TF-IDF) 0.9185 / 0.9229. All beat v007 on the practice
+exam; none clearly beats NEW-G (C=1.0 is +0.0017 on practice, within selection noise, 57 test answers differ), so
+NEW-G stays the candidate. GPU backbone scan (IndicBERTv2, HingMBERT) stayed queued on Kaggle (2 batch GPU sessions
+max; the P100 is retired and falls back to T4).
