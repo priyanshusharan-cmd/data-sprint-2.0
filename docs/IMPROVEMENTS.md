@@ -35,6 +35,8 @@ parallel on ONNX Runtime.
 ## Phase 2: a second HingRoBERTa (GPU, ~1.5 h on Kaggle T4 x2)
 `kaggle/cli_runner/run.py` runs two queues at once, one per GPU:
 * GPU 0: v007's HingRoBERTa exactly (seed 42): 5 folds (OOF) + full model, then trim.
+* then MuRIL (v005 settings) split across both GPUs (folds 0-2 + full on GPU 0, folds 3-4 on GPU 1), so the
+  three-model option can be measured from this run alone if the laptop run folders are not available.
 * GPU 1: domain-adaptive masked-LM training on the competition text (train + test queries, no labels; 3 epochs),
   then HingRoBERTa seed 7 from that encoder: 5 folds + full model, then trim.
 Then `python src/compare_v007.py --base runs/hing_lr5 runs/tfidf_aug --base_w 0.5 0.5 --cand runs/hing_lr5 runs/hing2 runs/tfidf_aug --cand_w 0.25 0.25 0.5`.

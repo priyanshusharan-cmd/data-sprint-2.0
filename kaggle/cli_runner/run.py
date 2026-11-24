@@ -6,6 +6,8 @@ Two queues run at the same time, one per T4 GPU (accelerator "GPU T4 x2"):
   GPU 0  v007's HingRoBERTa exactly (seed 42): 5 folds -> OOF for the blend check, then the full-data model.
   GPU 1  a second HingRoBERTa: domain-adaptive MLM on the competition text, then seed 7 from that encoder:
          5 folds, then the full-data model. If the MLM step fails it trains from the public checkpoint instead.
+  Then both GPUs share v005's MuRIL (folds 0-2 on GPU 0 + full model, folds 3-4 on GPU 1) so the three-model
+  Phase 1 option (HingRoBERTa + MuRIL + TF-IDF) can be measured from this run alone.
 Each full model is then vocabulary-trimmed (src/trim_vocab.py, lossless, asserts identical test predictions) so the
 two transformers + TF-IDF fit under 300M. The untrimmed weights are deleted only after a successful trim.
 """
@@ -13,18 +15,24 @@ import glob, os, shutil, subprocess, sys, tarfile, threading, time
 
 W = "/kaggle/working/runs"
 HING = "--model hingroberta --lr 5e-5 --llrd 0.95 --epochs 10"
+MURIL = "--model muril --lr 6e-5 --llrd 0.95 --epochs 10"   # v005's MuRIL settings (registry v003/v005)
+TRIM = "--top 60000"   # keep every competition token + the 60k most frequent pieces (demo coverage); lossless
 QUEUES = {
     "0": [
         f"python kaggle/train.py {HING} --seed 42 --run hing_lr5",
         f"python kaggle/train.py {HING} --seed 42 --full --run hing_full",
-        f"python src/trim_vocab.py {W}/hing_full/full --top 30000 && rm -f {W}/hing_full/full/model.pt",
+        f"python src/trim_vocab.py {W}/hing_full/full {TRIM} && rm -f {W}/hing_full/full/model.pt",
+        f"python kaggle/train.py {MURIL} --seed 42 --folds 0 1 2 --run muril_lr6",
+        f"python kaggle/train.py {MURIL} --seed 42 --full --run muril_full",
+        f"python src/trim_vocab.py {W}/muril_full/full {TRIM} && rm -f {W}/muril_full/full/model.pt",
     ],
     "1": [
         f"python kaggle/mlm_pretrain.py --model hingroberta --epochs 3 --out {W}/mlm_hing",
         f"python kaggle/train.py {HING} --seed 7 --run hing2 INIT",
         f"python kaggle/train.py {HING} --seed 7 --full --run hing2_full INIT",
-        f"python src/trim_vocab.py {W}/hing2_full/full --top 30000 && rm -f {W}/hing2_full/full/model.pt",
+        f"python src/trim_vocab.py {W}/hing2_full/full {TRIM} && rm -f {W}/hing2_full/full/model.pt",
         f"rm -rf {W}/mlm_hing",
+        f"python kaggle/train.py {MURIL} --seed 42 --folds 3 4 --run muril_lr6",
     ],
 }
 

@@ -89,8 +89,8 @@ def main():
              "--init_from runs/mlm_hing --run hing2_full --out runs"),
         md("## 9) Lossless vocabulary trimming of both encoders\n"
            "Each call asserts that the trimmed encoder predicts every test query exactly like the untrimmed one."),
-        code("!cd {REPO} && python src/trim_vocab.py runs/hing_full/full --top 30000\n"
-             "!cd {REPO} && python src/trim_vocab.py runs/hing2_full/full --top 30000"),
+        code("!cd {REPO} && python src/trim_vocab.py runs/hing_full/full --top 60000\n"
+             "!cd {REPO} && python src/trim_vocab.py runs/hing2_full/full --top 60000"),
         md("## 10) Blend and write `submission.csv`"),
         code("import numpy as np\n"
              "def softmax(z):\n"

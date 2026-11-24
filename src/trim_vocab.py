@@ -10,7 +10,7 @@ Most of HingRoBERTa's 278M parameters are its 250,002 x 768 word-embedding table
 and drops the rest. The kept rows are copied unchanged, so for any query whose tokens are all kept the trimmed model
 computes exactly the same numbers. A dropped token maps to <unk>. Nothing is retrained.
 
-    python src/trim_vocab.py runs/hing_full/full --top 30000          # writes runs/hing_full/trim/
+    python src/trim_vocab.py runs/hing_full/full --top 60000          # writes runs/hing_full/trim/
 
 The output dir holds model.pt (trimmed), keep.npy (kept original ids, sorted), encoder_config/, tokenizer/,
 test_logits.npy and metrics.json ("n_params" = parameters at inference, read by src/assemble.py), and records how many
@@ -104,7 +104,7 @@ def logits(model, tok, texts, max_len, dev, bs=128):
     return np.concatenate(out)
 
 
-def trim(full_dir, out_dir=None, top=30000):
+def trim(full_dir, out_dir=None, top=60000):
     from transformers import AutoConfig
     from verify_model import Brain, load
     full_dir = Path(full_dir)
@@ -155,7 +155,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("full_dir")
     ap.add_argument("--out", default=None)
-    ap.add_argument("--top", type=int, default=30000)
+    ap.add_argument("--top", type=int, default=60000)
     a = ap.parse_args()
     trim(a.full_dir, a.out, a.top)
 
