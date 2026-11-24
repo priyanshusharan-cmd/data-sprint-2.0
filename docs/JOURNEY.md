@@ -34,6 +34,7 @@ test is 64% Roman-script Hinglish**, and test wording is more casual and English
 | Three-model "compact challenger" (separate experiment): v007, but when its top-2 gap < 0.25 a 35/35/30 vote with a vocabulary-trimmed MuRIL; 298.9M params | Validation 0.9169 → 0.9197, practice exam 0.9191 → 0.9237, but the routing rule was tuned on the same rows; 44–70 ms per query. **Uploaded once: public 0.85605 (v007: 0.86786)** | Dropped; confirms that gains tuned on the evaluation rows don't transfer |
 | HingRoBERTa trained 14 epochs instead of 10 (best / final / average of epochs 12–14), folds 1–2 | Fold 1 blended practice exam up to +0.008, fold 2 down on every variant (−0.002 to −0.005) even though HingRoBERTa alone improved | Dropped; failed the "must win on both folds" rule |
 | HingRoBERTa + TF-IDF with more weight on HingRoBERTa (60/40 … 80/20) | All lower than 50/50 | 50/50 |
+| A third small linear model in the 12.6M spare parameters (`analysis/linear2.py`): Complement Naive Bayes (alone 0.803), word-level SVM (0.855), logistic regression on char+word TF-IDF (0.888, 3.7M params); also logistic regression replacing the SVM | Validation up to +0.001, but practice exam lower on every weight tried (0.916–0.919 vs v007's 0.9191) | Dropped; v007's two models already cover what a linear model can add |
 | int8 quantisation for demo speed | No speed gain, changed 15% of answers | Rejected; used ONNX Runtime instead (identical answers) |
 | Hindi-script-only TF-IDF, E5 reranker (from an external audit) | Lower, or over the parameter cap | Rejected |
 
