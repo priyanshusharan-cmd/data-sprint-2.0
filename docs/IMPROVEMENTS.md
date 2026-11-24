@@ -41,7 +41,23 @@ parallel on ONNX Runtime.
   then HingRoBERTa seed 7 from that encoder: 5 folds + full model, then trim.
 Then `python src/compare_v007.py --base runs/hing_lr5 runs/tfidf_aug --base_w 0.5 0.5 --cand runs/hing_lr5 runs/hing2 runs/tfidf_aug --cand_w 0.25 0.25 0.5`.
 The second model only has to be about as good as the first: averaging two different encoders is what gains.
-If it passes: `python tools/build_repro_v008.py --rule <cand>.json --csv <cand>.csv` writes `kaggle/reproduce_v008.ipynb`.
+If a candidate passes: `python tools/build_repro_v008.py --second hing2|muril --rule <cand>.json --csv <cand>.csv` writes
+`kaggle/reproduce_v008.ipynb` (adds the neighbour-vote step automatically when the rule uses it).
+
+## Demo latency: measured, and why the demo should stay on v007
+Real architectures and tokenizers with random weights (same compute), ONNX Runtime, 300 test queries, Apple M4
+(Arsh's i5-13500H measured v007 at p50 ~19 ms, close to the 22 ms here):
+
+| pipeline | p50 | p95 | max | over 50 ms |
+|---|---|---|---|---|
+| v007: 1 HingRoBERTa + TF-IDF | 22.2 ms | 32.6 | 52.3 | 0.3% |
+| 2 trimmed HingRoBERTa + TF-IDF (parallel, 3+3 threads) | 38.9 ms | 63.6 | 116.1 | 18.3% |
+| trimmed HingRoBERTa + trimmed MuRIL + TF-IDF (parallel) | 37.9 ms | 60.3 | 101.4 | 13.3% |
+
+Any two-encoder pipeline roughly doubles the query time and breaks the 50 ms target on 1 query in 6.
+**Recommendation:** a two-encoder winner is used as the second leaderboard pick only; the live demo stays on v007
+(one of our two picks, 100% reproducible, 0.3% over 50 ms). `src/infer.py` / `app/demo.py` can still run a
+two-encoder candidate for code verification.
 
 Open question for the organisers before submitting a Phase 2 model: masked-LM training uses the unlabelled test
 text (pseudo-labels, which also use test text, were approved on 23 Nov).
