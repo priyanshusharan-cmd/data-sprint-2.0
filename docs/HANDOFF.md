@@ -42,7 +42,16 @@ Everything below was verified on the original laptop before zipping. **This zip 
 - "Set an alarm" → 55 is **correct**: in train.csv, setting/querying alarms is labelled 55 (61 rows); only
   removing/turning off alarms is class 49 (81 rows). Defense talking point (`docs/DEFENSE.md`).
 
-## Folder contents (what is in the zip)
+## Small zip (27 MB): what is and is not included
+The teammate zip holds **code, data, docs and every model's prediction files** (`test_logits.npy`,
+`val_logits.npy`, `val_idx.npy`, `metrics.json`, `config.json`), which is all that is needed to evaluate and blend
+new ideas against v007–v010 (`tools/compare_fold.py`, `src/postprocess.py`, `src/assemble.py`).
+**Not included:** model weights (`model.pt`, ~1.1 GB each), tokenizers, `tfidf.joblib`, embeddings. Recreate when needed:
+- TF-IDF model: `python src/baseline.py --aug --save_run runs/tfidf_aug` (CPU, a few minutes; same results).
+- HingRoBERTa / DAPT weights: retrain on Kaggle (`kaggle/reproduce_v007.ipynb`, `kaggle/dapt_pilot.ipynb`).
+- The demo needs `runs/hing_full/full/model.pt` + `runs/tfidf_aug/full/tfidf.joblib`: run it on the owner's laptop.
+
+## Folder contents on the owner's laptop (full set)
 | path | what |
 |---|---|
 | `runs/hing_full/full/` | v007 encoder (`model.pt`, tokenizer, `encoder_config`) — used by the demo |
