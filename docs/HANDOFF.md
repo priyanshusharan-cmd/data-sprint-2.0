@@ -1,15 +1,16 @@
-# Handoff: state on 24 Nov 2026 (~5 PM IST)
+# Handoff: state on 24 Nov 2026 (evening IST)
 
-For the teammate and their Claude. Read this, then `CLAUDE.md` and `docs/PLAN.md`.
-Everything below was verified on the original laptop before zipping. **This zip is a snapshot of branch
-`exp/dapt`** (= `main` + the pretraining work and v009/v010), without git history.
+For the next person or coding agent (Claude, Codex). Read this, then `docs/JOURNEY.md`, `CLAUDE.md` / `AGENTS.md`.
+Everything below was verified on the original laptop. **`main` now contains all work** (the `exp/dapt` branch was
+merged in on 24 Nov: pretraining code, trimming tools, v008–v010). Zips sent to teammates are snapshots of `main`
+without git history.
 
 ## First thing to do (teammate's Claude)
 1. The zip has no `.git`. To use branches, clone the private repo
-   (`git clone https://github.com/priyanshusharan-cmd/data-sprint-2.0.git`), `git checkout exp/dapt`, then copy
+   (`git clone https://github.com/priyanshusharan-cmd/data-sprint-2.0.git`, branch `main`), then copy
    the zip's `runs/` folder into the clone. Without repo access, work in the zip folder and send changes back.
-2. Do all your work on **your own branch**: `git checkout -b exp/<your-name>` (from `exp/dapt` or `main`).
-   Commit and push only to that branch. Never commit to, rebase or force-push `main` or `exp/dapt`.
+2. Do all your work on **your own branch**: `git checkout -b exp/<your-name>` from `main`.
+   Commit and push only to that branch. Never commit to, rebase or force-push `main`.
 3. `main` holds the verified v007 pipeline used by the demo and the reproducible notebook. Only the repo owner
    merges a winning change into `main`.
 4. Kaggle uploads go through the owner (5 per day, resets 05:30 IST). Prepare the CSV and register it with

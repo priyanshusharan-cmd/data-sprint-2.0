@@ -38,8 +38,16 @@ Submission files: `submissions/v001_tfidf.csv`, `submissions/v002_tfidf-aug.csv`
 | MuRIL + clean pseudo-labels (fold 0, leak-free teacher) | 0.886 | 0.878 | test-like 0.8745 (worse) | dropped |
 | HingRoBERTa `--lr 5e-5 --llrd 0.95 --epochs 10` (`hing_lr5`), 5 folds | folds 0.889/0.895/0.902/0.896/0.885 | | OOF 0.8962, test-like 0.9041 | |
 | **v007 = full HingRoBERTa + full TF-IDF 0.5/0.5** (compliant 287,378,288) | — | — | 0.9169 (test-like 0.9191) | **0.86786 (#1 on 23 Nov)** |
-- **Final picks: v007 + v005.** Demo and `src/infer.py` default to v007 (end-to-end p50 ~26 ms, max ~47 ms on laptop CPU).
-- MuRIL + HingRoBERTa + TF-IDF would reach test-like 0.922 (+0.003) but needs vocabulary trimming to fit 300M; not worth it.
+- **Final picks (24 Nov): v007 + v009.** Demo and `src/infer.py` default to v007 (end-to-end p50 ~20 ms with ONNX Runtime, plugged in).
+
+## 2c. Last-day experiments (24 Nov) — all lost to v007 on public; full story in `docs/JOURNEY.md`
+| version | change | local check | public |
+|---|---|---|---|
+| — | third linear model in the 12.6M spare params (`analysis/linear2.py`) | practice exam lower on every weight | not uploaded |
+| v008 | trimmed HingRoBERTa + trimmed MuRIL + TF-IDF 0.35/0.3/0.35 (`tools/trim_vocab.py`, 299,498,920) | OOF 0.9210, test-like 0.9226 | 0.85792 |
+| v009 | DAPT: MLM on train+test text, 6 ep (`kaggle/mlm_pretrain.py`, `--init`), + TF-IDF, v007 rule (287,378,288) | fold 0 blend 0.9085 / practice 0.8999 (v007 0.9057 / 0.8935) | 0.86359 |
+| v010 | v007 HingRoBERTa + DAPT HingRoBERTa, both trimmed, + TF-IDF 1/1/1 (299,498,920) | fold 0 0.9083 / practice 0.9122 | 0.86215 |
+Takeaway: after v007, local gains (+0.004 to +0.019) never transferred to public; MuRIL never helps on public.
 - **MuRIL 5-fold (`muril_lr6`)**: folds 0.879 / 0.894 / 0.893 / 0.888 / 0.876; OOF 0.8909 (tuned 0.8927, test-like est. LB ~0.827).
 - **MuRIL + TF-IDF 0.5/0.5, 5-fold OOF**: raw 0.9115 → tuned 0.9150; test-like est. LB **~0.848** (best real 0.819). `src/assemble.py` builds the compliant version from the full-data models (246,890,864 params).
 - MuRIL needs a higher LR than the defaults; ~63 s/epoch on T4, still creeping up at epoch 10.
@@ -90,7 +98,7 @@ Every candidate goes through the registry; never upload a raw `postprocess.py` o
 4. Commit `submissions/` and `git push origin main --tags`. `subtrack.py list` shows everything; pick the 2 final submissions from it.
 Only `vNNN_*` files and `registry.csv` are tracked in `submissions/`; everything else there is gitignored scratch.
 
-## 6. Next steps, in order
+## 6. Next steps, in order (historical, 22–23 Nov; all done except distillation)
 1. MuRIL 5 folds `--lr 6e-5 --llrd 0.95 --epochs 10 --run muril_lr6` (owner's Kaggle). HingRoBERTa 5 folds `--lr 5e-5 --epochs 10 --run hing_lr5` (teammate's Kaggle, branch `exp/<name>`).
 2. MuRIL `--full` with the same flags (`--run muril_full`): weights for submission #3 and the demo.
 3. Final-assembly script (to build): full MuRIL test logits + one full-data TF-IDF SVM, weights/tau/bias from 5-fold OOF blend, param-count assert → submission #3.
@@ -117,10 +125,10 @@ Note: `val_shift` on this branch uses the new augmentation, so compare runs acro
 
 ## 7. Ideas not yet implemented (ranked by expected gain)
 - **Distillation** of MuRIL+HingRoBERTa blend into one ≤300M student on train + test (soft labels) — usually beats either single model.
-- **Domain-adaptive MLM** (continue pretraining 1–2 epochs on train+test+augmented text) before fine-tuning.
+- ~~Domain-adaptive MLM~~: done as v009 (public 0.86359, below v007).
 - **Translate-train**: Hindi→English copies of train rows via an open MT model (IndicTrans2, MIT) to teach English phrasings seen in test. Must be an open model, never a commercial API.
 - **kNN / Mahalanobis OOS score** on `test_emb` vs train embeddings, combined with the softmax threshold.
-- **Vocabulary trimming**: keeping only tokens seen in train+test+augmentation shrinks a 278M model to ~100M, which would allow a 2–3 model ensemble under 300M. Risk: unseen demo inputs map to UNK.
+- ~~Vocabulary trimming~~: done (`tools/trim_vocab.py`), used for v008 and v010; both lower than v007 on public.
 - R-Drop / adversarial (FGM) training for noise robustness.
 
 ## 8. Risks

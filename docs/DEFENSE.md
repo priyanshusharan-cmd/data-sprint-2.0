@@ -62,8 +62,24 @@ ranked them correctly.
 
 **What did not work?**
 Pseudo-labelling (its apparent gain was a leak; leak-free it was zero), a nearest-neighbour vote (too few test
-queries have close matches), a three-model blend (public 0.856), training 14 epochs (worse on one of two folds),
-and int8 quantisation (changed 15% of answers).
+queries have close matches), three-model blends with MuRIL (public 0.856 and 0.858), training 14 epochs (worse on
+one of two folds), and int8 quantisation (changed 15% of answers). On the last day: domain-adaptive pretraining
+(public 0.864) and two HingRoBERTas together (0.862). All won on our validation, none beat v007 on public.
+
+**Did you try pretraining on your own data?**
+Yes. HingRoBERTa continued its fill-in-the-blank training on our train and test query text (no labels) before
+fine-tuning. It learned faster (first-epoch score 0.75 vs 0.68) and won on a validation fold, but scored 0.864
+public vs 0.868, so we kept it only as our second final pick.
+
+**How did you fit two 278M models under 300M?**
+Vocabulary trimming: most of HingRoBERTa's parameters are a 250,002-row word table, and our data uses about
+10,000 rows. We removed rows for tokens our data never uses (mostly other scripts: Cyrillic, Chinese, Arabic) and
+checked that the test outputs stayed bit-identical. Two trimmed encoders + TF-IDF = 299,498,920 parameters.
+
+**Why didn't your later ideas help if they scored higher on validation?**
+Near the top, gains of 0.003–0.02 on our checks are smaller than the noise of the 974-query public board, and
+our test-like subset is built from training data. Four local wins in a row lost on public, so we stopped and kept
+the simplest model, which is also the one that runs in 20 ms and is fully reproducible.
 
 **How is latency under 50 ms on a CPU?**
 The trained model runs on ONNX Runtime (same weights, identical answers) with six threads on the laptop's
