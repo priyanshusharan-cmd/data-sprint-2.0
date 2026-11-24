@@ -45,9 +45,10 @@ Submission files: `submissions/v001_tfidf.csv`, `submissions/v002_tfidf-aug.csv`
 |---|---|---|---|
 | — | third linear model in the 12.6M spare params (`analysis/linear2.py`) | practice exam lower on every weight | not uploaded |
 | v008 | trimmed HingRoBERTa + trimmed MuRIL + TF-IDF 0.35/0.3/0.35 (`tools/trim_vocab.py`, 299,498,920) | OOF 0.9210, test-like 0.9226 | 0.85792 |
-| v009 | DAPT: MLM on train+test text, 6 ep (`kaggle/mlm_pretrain.py`, `--init`), + TF-IDF, v007 rule (287,378,288) | fold 0 blend 0.9085 / practice 0.8999 (v007 0.9057 / 0.8935) | 0.86359 |
-| v010 | v007 HingRoBERTa + DAPT HingRoBERTa, both trimmed, + TF-IDF 1/1/1 (299,498,920) | fold 0 0.9083 / practice 0.9122 | 0.86215 |
-Takeaway: after v007, local gains (+0.004 to +0.019) never transferred to public; MuRIL never helps on public.
+| v009 | DAPT: MLM on train+test text, 6 ep (`kaggle/mlm_pretrain.py`, `--init`), + TF-IDF, v007 rule (287,378,288) | fold 0 (same rule) 0.9105 / practice 0.9060 (v007 0.9089 / 0.9000) | 0.86359 |
+| v010 | v007 HingRoBERTa + DAPT HingRoBERTa, both trimmed, + TF-IDF 1/1/1 (299,498,920) | fold 0 0.9083 / practice 0.9122 (whole fold slightly worse than v007) | 0.86215 |
+Takeaway: after v007, nothing that looked better locally beat it on public; MuRIL never helps on public. Fold-0 numbers
+above use v007's rule on both sides (an earlier version compared unruled blends and overstated v009/v010).
 - **MuRIL 5-fold (`muril_lr6`)**: folds 0.879 / 0.894 / 0.893 / 0.888 / 0.876; OOF 0.8909 (tuned 0.8927, test-like est. LB ~0.827).
 - **MuRIL + TF-IDF 0.5/0.5, 5-fold OOF**: raw 0.9115 → tuned 0.9150; test-like est. LB **~0.848** (best real 0.819). `src/assemble.py` builds the compliant version from the full-data models (246,890,864 params).
 - MuRIL needs a higher LR than the defaults; ~63 s/epoch on T4, still creeping up at epoch 10.

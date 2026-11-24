@@ -57,8 +57,9 @@ out-of-scope). Our model follows the official labels. Stopping or managing an ex
 
 **How do you know it generalises and isn't overfitted to the public leaderboard?**
 All choices were made on 5-fold cross-validation over 16,936 rows, plus a test-like subset selected by a
-train-vs-test classifier. We uploaded only four times; each upload beat the previous one, and the test-like subset
-ranked them correctly.
+train-vs-test classifier. Our first four uploads each beat the previous one and the test-like subset ranked them correctly.
+Later candidates that looked slightly better locally did not beat v007 on public, so we kept v007 rather than
+chasing the public board.
 
 **What did not work?**
 Pseudo-labelling (its apparent gain was a leak; leak-free it was zero), a nearest-neighbour vote (too few test
@@ -68,8 +69,8 @@ one of two folds), and int8 quantisation (changed 15% of answers). On the last d
 
 **Did you try pretraining on your own data?**
 Yes. HingRoBERTa continued its fill-in-the-blank training on our train and test query text (no labels) before
-fine-tuning. It learned faster (first-epoch score 0.75 vs 0.68) and won on a validation fold, but scored 0.864
-public vs 0.868, so we kept it only as our second final pick.
+fine-tuning. It learned faster (first-epoch score 0.75 vs 0.68) but its gain on a validation fold was small (+0.002), and it
+scored 0.864 public vs 0.868, so we kept it only as our second final pick.
 
 **How did you fit two 278M models under 300M?**
 Vocabulary trimming: most of HingRoBERTa's parameters are a 250,002-row word table, and our data uses about

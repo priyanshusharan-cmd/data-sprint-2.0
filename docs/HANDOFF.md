@@ -23,8 +23,8 @@ without git history.
 |---|---|---|---|---|
 | **v007** | HingRoBERTa (full) + TF-IDF 50/50, tuned rule | 287,378,288 | OOF 0.9169, practice 0.9191 | **0.86786** (best) |
 | v008 | trimmed HingRoBERTa + trimmed MuRIL + TF-IDF | 299,498,920 | OOF 0.9210, practice 0.9226 | 0.85792 |
-| v009 | DAPT HingRoBERTa (MLM on train+test text) + TF-IDF, v007 rule | 287,378,288 | fold0 blend 0.9085, practice 0.8999 (v007 fold0: 0.9057 / 0.8935) | 0.86359 |
-| **v010** | trimmed v007 HingRoBERTa + trimmed DAPT HingRoBERTa + TF-IDF 1/1/1, v007 rule | 299,498,920 | fold0 0.9083, practice 0.9122 | 0.86215 |
+| v009 | DAPT HingRoBERTa (MLM on train+test text) + TF-IDF, v007 rule | 287,378,288 | fold0 0.9105 / practice 0.9060 (v007 fold0, same rule: 0.9089 / 0.9000) | 0.86359 |
+| **v010** | trimmed v007 HingRoBERTa + trimmed DAPT HingRoBERTa + TF-IDF 1/1/1, v007 rule | 299,498,920 | fold0 0.9083 / practice 0.9122 | 0.86215 |
 
 - Leader on public: **0.87040** (Jihaan Jain). Public = 974 rows (20%); final ranking uses the private 80%.
 - **Final picks (ticked by the owner before 9 PM IST 24 Nov): v007 + v009.** Private score = the better of the two ticked picks.
@@ -92,8 +92,7 @@ Second time a HingRoBERTa + MuRIL mix improved validation and the practice exam 
   **bit-identical** to the untrimmed model (max |diff| 0.0). Inputs use `id_map.npy` to remap token ids.
 - Blend 0.35/0.3/0.35, rule tuned on 5-fold OOF: OOF 0.9210 (v007 0.9169), practice exam 0.9226 (v007 0.9191).
   251 of 4,912 test answers differ from v007.
-- Plan: owner uploads v008 → `python src/subtrack.py submitted v008` → `lb v008 <score>`. If public ≥ v007, tick
-  **v007 + v008** as finals (replace v005). If lower, keep v007 + v005.
+- (Historical plan, done: v008 was uploaded and scored 0.85792, so it was not picked.)
 - Not done for v008: demo integration (two encoders ≈ double latency; demo stays on v007) and a reproducible
   notebook (v007's notebook + MuRIL full training + `tools/trim_vocab.py` would be needed if v008 ends up winning).
 
@@ -117,7 +116,7 @@ HingRoBERTa + MuRIL + TF-IDF, scored on 5-fold OOF (`src/postprocess.py runs/hin
 - Two encoders double latency (the earlier challenger measured 44–70 ms), so **the demo stays on v007**.
 - Safe use, if any: upload it and, if its public score is ≥ v007, tick it **instead of v005** (v005 can never
   beat v007, so that pick is otherwise wasted). Must be done before 9 PM IST, needs the trimmed models + the
-  parameter assert to show compliance. If time is short, skip it: v007 + v005 is a fine final.
+  parameter assert to show compliance. (Historical: final picks are now v007 + v009.)
 
 ## Still to do
 1. Account owner: tick final picks on Kaggle before 9 PM IST.

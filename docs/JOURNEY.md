@@ -33,8 +33,8 @@ test is 64% Roman-script Hinglish**, and test wording is more casual and English
 | MuRIL + HingRoBERTa + TF-IDF together (first look, 23 Nov) | Practice exam 0.9220 (+0.003 over v007) but 515.7M params; would need vocabulary trimming to fit 300M | Postponed; built properly as v008 on 24 Nov (below) |
 | Three-model "compact challenger" (separate experiment): v007, but when its top-2 gap < 0.25 a 35/35/30 vote with a vocabulary-trimmed MuRIL; 298.9M params | Validation 0.9169 → 0.9197, practice exam 0.9191 → 0.9237, but the routing rule was tuned on the same rows; 44–70 ms per query. **Uploaded once: public 0.85605 (v007: 0.86786)** | Dropped; confirms that gains tuned on the evaluation rows don't transfer |
 | **v008**: plain 35/30/35 average of HingRoBERTa + MuRIL + TF-IDF, both encoders vocabulary-trimmed (only tokens never used in train/test and outside Latin/Devanagari removed; outputs bit-identical), 299,498,920 params | Validation 0.9210, practice exam 0.9226 (v007: 0.9169 / 0.9191). **Uploaded: public 0.85792** | Dropped. Second MuRIL mix that won locally and lost ~0.01 on public: MuRIL's gains do not transfer to the test |
-| **v009**: domain-adaptive pretraining: HingRoBERTa continues masked-word training on train + test query text (no labels) + augmented train for 6 epochs, then fine-tuned exactly like v007; + TF-IDF 50/50, v007 rule; 287,378,288 params | Fold 0 blended: all 0.9085 vs 0.9057, practice exam 0.8999 vs 0.8935 (gate passed). **Uploaded: public 0.86359** | Not better than v007 on public; kept as second final pick (best public after v007) |
-| **v010**: v007's HingRoBERTa + the pretrained HingRoBERTa + TF-IDF 1/1/1, both encoders vocabulary-trimmed (outputs bit-identical), 299,498,920 params | Fold 0: all 0.9083, practice exam 0.9122 (v007 0.8935). **Uploaded: public 0.86215** | Dropped. Third time in a day that a local gain (+0.006 to +0.019 on the practice exam) lost 0.004–0.010 on public: we stopped tuning against local proxies and kept v007 |
+| **v009**: domain-adaptive pretraining: HingRoBERTa continues masked-word training on train + test query text (no labels) + augmented train for 6 epochs, then fine-tuned exactly like v007; + TF-IDF 50/50, v007 rule; 287,378,288 params | fold 0 with v007's rule on both sides: all 0.9105 vs 0.9089 (+0.0016), practice exam 0.9060 vs 0.9000 (+0.006). Our gate compared blends without the rule and reported +0.0027 (passed); like for like it would have failed (+0.002 needed). **Uploaded: public 0.86359** | Not better than v007 on public; kept as second final pick (best public after v007, same size, genuinely different model) |
+| **v010**: v007's HingRoBERTa + the pretrained HingRoBERTa + TF-IDF 1/1/1, both encoders vocabulary-trimmed (outputs bit-identical), 299,498,920 params | fold 0 with v007's rule on both sides: all 0.9083 vs 0.9089 (−0.0006), practice exam 0.9122 vs 0.9000 (+0.012): worse on the whole fold, better only on 844 practice-exam rows. (First reported against v007 without the rule, which made it look better.) **Uploaded: public 0.86215** | Dropped. We stopped tuning against local proxies and kept v007 |
 | HingRoBERTa trained 14 epochs instead of 10 (best / final / average of epochs 12–14), folds 1–2 | Fold 1 blended practice exam up to +0.008, fold 2 down on every variant (−0.002 to −0.005) even though HingRoBERTa alone improved | Dropped; failed the "must win on both folds" rule |
 | HingRoBERTa + TF-IDF with more weight on HingRoBERTa (60/40 … 80/20) | All lower than 50/50 | 50/50 |
 | A third small linear model in the 12.6M spare parameters (`analysis/linear2.py`): Complement Naive Bayes (alone 0.803), word-level SVM (0.855), logistic regression on char+word TF-IDF (0.888, 3.7M params); also logistic regression replacing the SVM | Validation up to +0.001, but practice exam lower on every weight tried (0.916–0.919 vs v007's 0.9191) | Dropped; v007's two models already cover what a linear model can add |
@@ -51,10 +51,10 @@ test is 64% Roman-script Hinglish**, and test wording is more casual and English
 | **v007** | **full HingRoBERTa + TF-IDF 50/50** | **0.9169** | **0.9191** | **0.86786** | **best, final pick 1** |
 | challenger | v007 + routed trimmed MuRIL vote | 0.9197 | 0.9237 | 0.85605 | dropped |
 | v008 | trimmed HingRoBERTa + trimmed MuRIL + TF-IDF | 0.9210 | 0.9226 | 0.85792 | dropped |
-| v009 | domain-adapted HingRoBERTa + TF-IDF | fold 0: 0.9085 | fold 0: 0.8999 | 0.86359 | final pick 2 |
+| v009 | domain-adapted HingRoBERTa + TF-IDF | fold 0: 0.9105 | fold 0: 0.9060 | 0.86359 | final pick 2 |
 | v010 | both HingRoBERTas (trimmed) + TF-IDF | fold 0: 0.9083 | fold 0: 0.9122 | 0.86215 | dropped |
 
-\* fold 0 only. Fold-0 reference for v007: validation 0.9057, practice exam 0.8935.
+\* fold 0 only, all with v007's decision rule. Fold-0 reference for v007 with the same rule: 0.9089 / 0.9000.
 
 ## The last day (24 Nov): chasing 0.87040
 In the afternoon another team passed us on the public board (0.87040 vs 0.86786, a gap of about 2–3 of the 974
@@ -70,22 +70,26 @@ public queries). With five uploads a day we tried, in order:
    query text (train + test queries, no labels, plus augmented train), then was fine-tuned exactly like v007
    (`kaggle/mlm_pretrain.py`, `kaggle/dapt_pilot.ipynb`, 55 min on a T4). The first run ran out of GPU memory
    (full 250K-word logits for every token); scoring only the masked positions fixed it with identical loss. It
-   started much faster (fold 0 epoch 0: 0.751 vs 0.679) and won the fold-0 gate on the blend (+0.0027 all,
-   +0.0064 practice exam), but scored 0.86359 on public.
+   started much faster (fold 0 epoch 0: 0.751 vs 0.679). Our fold-0 gate reported +0.0027 / +0.0064 and passed,
+   but it compared blends without the decision rule; like for like the gain was +0.0016 / +0.006, below our own
+   +0.002 bar (found in an independent audit the same evening). It scored 0.86359 on public.
 4. **Two HingRoBERTas (v010).** v007's encoder + the pretrained one, both trimmed to 145.1M, + TF-IDF: the best
-   fold-0 practice exam of the whole project (0.9122 vs 0.8935), and 0.86215 on public.
+   fold-0 practice exam of the project (0.9122 vs 0.9000), but slightly worse on the whole fold (0.9083 vs 0.9089),
+   and 0.86215 on public.
 
-Every one of these won on our local checks and lost on public. We stopped there and kept v007, with v009 as the
+Each looked better on at least one local check and none beat v007 on public. We stopped there and kept v007, with v009 as the
 second final pick (best public score after v007, same 287.4M size, a genuinely different model for the private 80%).
 
 ## Lessons that shaped decisions
 - **Measure on rows that look like the test.** Plain CV over-estimated the leaderboard by ~0.06; our practice exam ranked every upload correctly and predicted v005 within 0.004.
 - **Leak-check every "free" gain.** The pseudo-label gain disappeared once the teacher could not see validation rows.
-- **Upload only what beats the best on 5-fold evidence.** Four uploads, each better than the last: 0.812 → 0.819 → 0.845 → 0.868.
+- **Upload only what beats the best on 5-fold evidence.** Up to v007, four uploads, each better than the last: 0.812 → 0.819 → 0.845 → 0.868.
+- **Compare like with like.** Same rows, same decision rule, all folds. Comparing a ruled blend against an unruled
+  baseline made v010 look better on fold 0 than it was; comparing raw blends let v009 pass a gate it should have failed.
 - **Local proxies stop working near the top.** Up to v007 the practice exam ranked every upload correctly. After
-  v007, four local wins of +0.004 to +0.019 all lost 0.004–0.012 on public. Once gains are this small, the 974
-  public rows, one-fold gates and our proxy are all too noisy to separate them; the larger the local gain, the
-  more it lost, which suggests we were fitting the proxy.
+  v007, every candidate that looked better locally (v008 on 5 folds, v009/v010 on one fold) lost 0.004–0.012 on
+  public. Gains this small are below the noise of the 974 public rows, one-fold checks and our proxy; the practice
+  exam is also less Roman (55%) than the test (64%) and under-represents the least familiar test wording.
 - **MuRIL never transferred.** Every mix with MuRIL looked good locally and was worse on public.
 - **Keep the simplest model that holds up.** v007 (one encoder + one linear model) stayed best through every
   experiment, is reproducible, and runs in ~20 ms.

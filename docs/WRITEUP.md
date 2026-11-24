@@ -1,7 +1,7 @@
 # Open-set intent classification for Hindi and Hinglish voice queries
 **Anveshan Data Sprint 2.0, NLP track. Kaggle team: Priyanshu Sharan** · Members: _[add names]_
 
-**Result:** public leaderboard macro-F1 **0.86786** (rank 1 at submission time; organiser baseline 0.520).
+**Result:** public leaderboard macro-F1 **0.86786** (rank 1 when submitted on 23 Nov; organiser baseline 0.520).
 **Model:** fine-tuned HingRoBERTa-mixed + character TF-IDF/LinearSVC, averaged 50/50, with a class-55 fallback rule.
 **Size:** 287,378,288 parameters (limit 300M). **Latency:** ~19 ms median per query on a laptop CPU.
 
@@ -63,21 +63,21 @@ parameters) was never used for a submission. Checked with the organisers' assert
 | v005 | full-data MuRIL + TF-IDF 50/50 | 0.915 | 0.909 | 0.845 |
 | **v007** | **full-data HingRoBERTa + TF-IDF 50/50** | **0.917** | **0.919** | **0.868** |
 | v008 | vocabulary-trimmed HingRoBERTa + MuRIL + TF-IDF (299.5M) | 0.921 | 0.923 | 0.858 |
-| v009 | domain-adapted HingRoBERTa (MLM on task text) + TF-IDF | 0.909* | 0.900* | 0.864 |
+| v009 | domain-adapted HingRoBERTa (MLM on task text) + TF-IDF | 0.911* | 0.906* | 0.864 |
 | v010 | two trimmed HingRoBERTas + TF-IDF (299.5M) | 0.908* | 0.912* | 0.862 |
 
-\* fold 0 only (v007 on fold 0: 0.906 / 0.894). Final picks: v007 and v009.
+\* fold 0 only (v007 on fold 0, same rule: 0.909 / 0.900). Final picks: v007 and v009.
 
 **Tried and dropped:** default MuRIL settings (0.738, under-trained); pseudo-labelling (no gain once leak-free);
 nearest-neighbour vote (+0.002 CV, changed 16 test rows); a routed three-model blend (public 0.856); 14-epoch
 training (worse on one of two folds); a third linear model in the spare 12.6M parameters (lower test-like);
-int8 quantisation (changed 15% of answers). v008–v010 (table) won locally but not on public.
+int8 quantisation (changed 15% of answers). v008–v010 (table) looked better on some local checks but not on public.
 
 **Vocabulary trimming and domain-adaptive pretraining.** To fit two encoders under 300M we removed embedding rows
 for tokens never seen in train, test or augmented train and outside Latin/Devanagari script (HingRoBERTa 278M →
 145–151M) with bit-identical test outputs. Domain-adaptive pretraining continued HingRoBERTa's masked-word
-training on the unlabelled task text for 6 epochs before fine-tuning; it learned faster and won on fold 0, but
-did not beat v007 on public. We kept the simplest model that held up.
+training on the unlabelled task text for 6 epochs before fine-tuning; it learned faster but gained only
++0.002 on fold 0 and did not beat v007 on public. We kept the simplest model that held up.
 
 ## 5. Robustness, fallback and the live system
 - **Scripts:** the same model handles Devanagari, Roman Hinglish and mixed queries; augmentation teaches script

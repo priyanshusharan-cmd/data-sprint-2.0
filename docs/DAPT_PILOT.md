@@ -20,9 +20,12 @@ git checkout exp/dapt
 # unzip results_small.zip so that runs\dapt_hing_ft\fold0 and runs\dapt_hing_full\full exist
 .venv\Scripts\python.exe tools\compare_fold.py runs\dapt_hing_ft\fold0
 ```
-v007's fold 0 (50/50 with TF-IDF): **0.9057** all rows, **0.8935** practice exam.
-The script prints `GATE PASSED` only if the new model beats both by more than +0.002. **If it fails, stop**:
-keep v007 + v005 and spend the time on the demo.
+v007's fold 0 (50/50 with TF-IDF, v007's decision rule): **0.9089** all rows, **0.9000** practice exam.
+The script prints `GATE PASSED` only if the new model beats both by more than +0.002. **If it fails, stop.**
+
+**Outcome (24 Nov):** the first version of the script compared blends without the rule and reported +0.0027 /
++0.0064 (passed). Fixed to apply the rule to both sides, it shows +0.0016 / +0.006: **gate failed**. v009 was uploaded
+anyway and scored 0.86359 public (v007 0.86786).
 
 ## 3. If the gate passes: build and upload
 ```powershell

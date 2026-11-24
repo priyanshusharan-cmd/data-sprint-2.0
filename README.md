@@ -11,24 +11,32 @@ unweighted macro-F1, model budget <= 300M parameters at inference.
 ## Layout
 | path | what |
 |---|---|
-| `data/` | Kaggle CSVs (committed; repo is private) |
+| `data/` | Kaggle CSVs + `testlike.csv` (practice-exam rows) (committed; repo is private) |
 | `src/normalize.py` | Devanagari→Latin (reused from our Amazon ML Challenge 2026 pipeline) + Hinglish phonetic folding |
-| `src/augment.py` | test-style augmentation: dataset-style romanizer, colloquial fillers, number→digit, ASR noise |
-| `src/baseline.py` | CPU TF-IDF + LinearSVC (`--aug` for augmentation) |
-| `kaggle/train.py` | GPU fine-tuning, 5-fold, resumable per fold, clean + shifted validation |
-| `kaggle/train_runner.ipynb` | Kaggle notebook that clones this repo and runs `train.py` |
-| `src/postprocess.py` | blend runs, tune class-55 threshold + per-class bias on OOF, write submission / pseudo-labels |
+| `src/augment.py` | rule-based test-style augmentation: dataset-style romanizer, colloquial fillers, number→digit, ASR noise |
+| `src/baseline.py` | TF-IDF + LinearSVC (`--aug`, `--save_run` writes 5-fold + full-data outputs) |
+| `kaggle/train.py` | GPU fine-tuning, 5-fold or `--full`, resumable; `--init` starts from a local checkpoint |
+| `kaggle/mlm_pretrain.py` | domain-adaptive masked-LM pretraining on the task text (used for v009) |
+| `kaggle/*.ipynb` | Kaggle runners: `train_runner`, `dapt_pilot`, and **`reproduce_v007`** (for judges) |
+| `src/postprocess.py`, `src/assemble.py` | blend runs, tune class-55 threshold + per-class biases on OOF, param-cap assert, write submission |
+| `src/testlike.py` | the "practice exam": training rows that look most like the test |
+| `src/subtrack.py` | submission registry (`submissions/registry.csv`) |
+| `src/infer.py`, `app/demo.py` | the v007 pipeline on CPU (ONNX Runtime) and the Gradio demo |
+| `tools/` | vocabulary trimming, fold-0 gate, notebook builder |
+| `docs/` | `JOURNEY` (every experiment), `WRITEUP` (2 pages), `DEFENSE` (demo script + Q&A), `HANDOFF`, `PLAN` |
 
-## Workflow
-1. **Kaggle (GPU):** import `kaggle/train_runner.ipynb`, set `MODEL`, Save & Run All (commit). Download `runs_all.zip`.
-2. **Mac (CPU):** unzip into `runs/`, then `python src/postprocess.py runs/muril runs/hingroberta`.
-3. Upload `submissions/*.csv` to Kaggle.
+## Results (public leaderboard = 974 test rows)
+| version | model | 5-fold macro-F1 | practice exam | public |
+|---|---|---|---|---|
+| baseline | organiser TF-IDF + LinearSVC | — | — | 0.520 |
+| v002 | TF-IDF + augmentation | 0.8859 | 0.8724* | 0.81230 |
+| v005 | MuRIL + TF-IDF | 0.9150 | 0.9086 | 0.84464 |
+| **v007** | **HingRoBERTa + TF-IDF (287,378,288 params)** | **0.9169** | **0.9191** | **0.86786** |
+| v008 | trimmed HingRoBERTa + MuRIL + TF-IDF | 0.9210 | 0.9226 | 0.85792 |
+| v009 | domain-adapted HingRoBERTa + TF-IDF | 0.9105* | 0.9060* | 0.86359 |
+| v010 | two trimmed HingRoBERTas + TF-IDF | 0.9083* | 0.9122* | 0.86215 |
 
-## Results
-| model | CV macro-F1 | public LB |
-|---|---|---|
-| TF-IDF + LinearSVC | 0.8733 | — |
-| TF-IDF + LinearSVC + augmentation | 0.8859 | — |
+\* fold 0 only. **Final picks: v007 + v009.** Details and lessons: [`docs/JOURNEY.md`](docs/JOURNEY.md).
 
 ## Final submission and how to reproduce it
 - **v007 = HingRoBERTa-mixed (fine-tuned) + character TF-IDF/LinearSVC, 50/50**, 287,378,288 parameters, public LB **0.86786**.
