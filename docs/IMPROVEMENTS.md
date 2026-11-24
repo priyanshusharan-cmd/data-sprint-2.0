@@ -113,3 +113,9 @@ env overrides in `src/baseline.py`, defaults unchanged): 4 augmented copies OOF 
 exam; none clearly beats NEW-G (C=1.0 is +0.0017 on practice, within selection noise, 57 test answers differ), so
 NEW-G stays the candidate. GPU backbone scan (IndicBERTv2, HingMBERT) stayed queued on Kaggle (2 batch GPU sessions
 max; the P100 is retired and falls back to T4).
+
+**Backbone scan (24 Nov, 19:54; `kaggle/backbone_scan.ipynb` on T4 x2).** Fold-0 encoder alone (best_score): HingRoBERTa
+0.8886, HingMBERT-mixed 0.8800, IndicBERTv2 0.8517. Blends on fold-0 rows (all / practice): v007 0.9089 / 0.9000,
+NEW-G 0.9133 / 0.9103; HingMBERT + TF-IDF geo 0.9076 / 0.9010; IndicBERTv2 + TF-IDF geo 0.9074 / 0.9072; HingRoBERTa +
+IndicBERTv2 + TF-IDF geo 0.9134 / 0.9116 (= NEW-G within noise, but two encoders: trimming + double latency). Neither new
+backbone replaces HingRoBERTa; NEW-G stays the best candidate.
