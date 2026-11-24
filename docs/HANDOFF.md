@@ -23,11 +23,10 @@ Everything below was verified on the original laptop before zipping. **This zip 
 | **v007** | HingRoBERTa (full) + TF-IDF 50/50, tuned rule | 287,378,288 | OOF 0.9169, practice 0.9191 | **0.86786** (best) |
 | v008 | trimmed HingRoBERTa + trimmed MuRIL + TF-IDF | 299,498,920 | OOF 0.9210, practice 0.9226 | 0.85792 |
 | v009 | DAPT HingRoBERTa (MLM on train+test text) + TF-IDF, v007 rule | 287,378,288 | fold0 blend 0.9085, practice 0.8999 (v007 fold0: 0.9057 / 0.8935) | 0.86359 |
-| **v010** | trimmed v007 HingRoBERTa + trimmed DAPT HingRoBERTa + TF-IDF 1/1/1, v007 rule | 299,498,920 | fold0 0.9083, practice 0.9122 | **uploading now** |
+| **v010** | trimmed v007 HingRoBERTa + trimmed DAPT HingRoBERTa + TF-IDF 1/1/1, v007 rule | 299,498,920 | fold0 0.9083, practice 0.9122 | 0.86215 |
 
 - Leader on public: **0.87040** (Jihaan Jain). Public = 974 rows (20%); final ranking uses the private 80%.
-- **Final picks (Kaggle → Submissions, ticked by the owner before 9 PM IST 24 Nov):** v007 + the best of
-  v009/v010. Private score = the better of the two ticked picks.
+- **Final picks (ticked by the owner before 9 PM IST 24 Nov): v007 + v009.** Private score = the better of the two ticked picks.
 - Lesson so far: local gains of +0.003–0.006 did **not** transfer to public three times (challenger, v008, v009).
   MuRIL mixes never help on public. Demo = v007 (two encoders would break <50 ms).
 - Deadlines: Unstop final **24 Nov 9 PM IST**. Live demo + defense + slides **25 Nov**.
