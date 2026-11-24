@@ -14,8 +14,11 @@
    reproduces the exact submission.
 
 ## 5-minute live demo script
-Start the app 10 minutes early: `.venv\Scripts\python.exe app\demo.py`, open http://127.0.0.1:7860, run 2–3 queries
-to warm it up. Laptop plugged in, best-performance power mode, other apps and browser tabs closed.
+**Start a fresh app 10 minutes early** (close any demo left running from earlier: a process that sat idle for hours,
+or was started on battery, answered in 70–1,100 ms in our test): `.venv\Scripts\python.exe app\demo.py`, open
+http://127.0.0.1:7860, then **click 10 suggestions to warm it up**. The first few answers after a start take
+40–60 ms; after warm-up they settle at ~25–33 ms in the app (~18 ms in `src/infer.py --check`). Laptop plugged in,
+best-performance power mode, other apps and browser tabs closed.
 
 | Minute | Show | Say |
 |---|---|---|
