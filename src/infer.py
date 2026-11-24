@@ -1,6 +1,8 @@
 """
-Inference pipeline used by the demo and by the final-submission check: one encoder + one TF-IDF SVM
+Inference pipeline used by the demo and by the final-submission check: one or two encoders + one TF-IDF SVM
 (+ optional nearest-neighbour vote), the class-55 rule and biases tuned on 5-fold OOF.
+Two encoders = vocabulary-trimmed copies (src/trim_vocab.py), e.g.
+    python src/infer.py --check --encoder runs/hing_full/trim runs/hing2_full/trim --rule submissions/<rule>.json
 
     python src/infer.py --check          # rebuild TF-IDF, reproduce the v005 submission, time single queries
     python src/infer.py "kal subah 7 baje ka alarm laga do"
@@ -73,40 +75,24 @@ def export_onnx(encoder, tok, out_path):
                       opset_version=17, dynamo=False)
 
 
-class IntentPipeline:
-    def __init__(self, encoder=DEFAULT["encoder"], tfidf=DEFAULT["tfidf"], rule=DEFAULT["rule"], knn=DEFAULT["knn"],
-                 threads=None, engine="onnx", ort_threads=6):
-        """engine: "onnx" (default) = ONNX Runtime, exporting model.onnx once if missing; "auto" = ONNX only if it exists;
-        "pytorch" = always PyTorch."""
-        pin_fast_cores()
-        if threads:
-            torch.set_num_threads(threads)
-        self.encoder, self.tok, cfg = load_encoder(ROOT / encoder)
+class _Encoder:
+    """One fine-tuned encoder + head (full or vocabulary-trimmed), on ONNX Runtime when available."""
+
+    def __init__(self, path, engine="onnx", ort_threads=6):
+        self.path = ROOT / path
+        self.model, self.tok, cfg = load_encoder(self.path)
         self.max_len = cfg["max_len"]
-        self.encoder_name = {"google/muril-base-cased": "MuRIL",
-                             "l3cube-pune/hing-roberta-mixed": "HingRoBERTa"}.get(cfg["hf_name"], cfg["hf_name"])
-        tpath = ROOT / tfidf
-        self.tf = joblib.load(tpath) if tpath.exists() else build_tfidf(tpath)
-        r = json.loads((ROOT / rule).read_text())
-        self.w = np.array(r["weights"], dtype=float) / sum(r["weights"])
-        self.tau, self.bias = r["tau"], np.array(r["bias"])
-        self.knn = None
-        if knn:
-            import neighbors as nb
-            tr = pd.read_csv(ROOT / "data/train.csv")
-            self.knn = nb.KnnIndex(tr.query_text.values, tr.target.values)
-        n_enc = sum(p.numel() for p in self.encoder.parameters())
-        n_svm = int(self.tf["clf"].coef_.size + self.tf["clf"].intercept_.size)
-        self.params = {"encoder": n_enc, "tfidf_svm": n_svm, "total": n_enc + n_svm}
-        assert self.params["total"] <= PARAM_CAP, self.params
+        self.name = {"google/muril-base-cased": "MuRIL",
+                     "l3cube-pune/hing-roberta-mixed": "HingRoBERTa"}.get(cfg["hf_name"], cfg["hf_name"])
+        self.params = sum(p.numel() for p in self.model.parameters())
         # Same weights, faster engine: ONNX Runtime with 6 threads gave identical answers on all 4,912 test queries
         # and p50 18 ms / max 35 ms over 1,000 queries on the i5-13500H (PyTorch: p50 27 ms, spikes to 60+ ms).
         self.engine = "pytorch"
-        onnx_path = ROOT / encoder / "model.onnx"
+        onnx_path = self.path / "model.onnx"
         if engine != "pytorch":
             if engine == "onnx" and not onnx_path.exists():
                 try:  # one-time export (~1 min, needs the onnx package); otherwise stay on PyTorch
-                    export_onnx(self.encoder, self.tok, onnx_path)
+                    export_onnx(self.model, self.tok, onnx_path)
                 except Exception as err:
                     print(f"ONNX export skipped ({err}); using PyTorch", flush=True)
             if onnx_path.exists():
@@ -119,6 +105,50 @@ class IntentPipeline:
                     self.engine = f"onnxruntime ({ort_threads} threads)"
                 except ImportError:
                     pass
+
+    def logits(self, texts):
+        enc = self.tok(list(texts), padding=True, truncation=True, max_length=self.max_len, return_tensors="pt")
+        if self.engine != "pytorch":
+            return self._sess.run(None, {"ids": enc["input_ids"].numpy(), "mask": enc["attention_mask"].numpy()})[0]
+        return self.model(enc["input_ids"], enc["attention_mask"]).float().numpy()
+
+
+class IntentPipeline:
+    def __init__(self, encoder=DEFAULT["encoder"], tfidf=DEFAULT["tfidf"], rule=DEFAULT["rule"], knn=DEFAULT["knn"],
+                 threads=None, engine="onnx", ort_threads=6):
+        """encoder: one path or a list of paths (several encoders are averaged with the rule's weights; the last
+        weight is the TF-IDF model's). engine: "onnx" (default) = ONNX Runtime, exporting model.onnx once if missing;
+        "auto" = ONNX only if it exists; "pytorch" = always PyTorch. With two encoders each gets half the ONNX
+        threads and both run at the same time."""
+        pin_fast_cores()
+        if threads:
+            torch.set_num_threads(threads)
+        paths = [encoder] if isinstance(encoder, (str, Path)) else list(encoder)
+        per = max(1, ort_threads // len(paths))
+        self.encoders = [_Encoder(p, engine, per) for p in paths]
+        self.encoder_name = " + ".join(e.name for e in self.encoders)
+        self.engine = self.encoders[0].engine
+        self._pool = None
+        if len(self.encoders) > 1:
+            from concurrent.futures import ThreadPoolExecutor  # ONNX Runtime releases the GIL: encoders run in parallel
+            self._pool = ThreadPoolExecutor(len(self.encoders))
+        tpath = ROOT / tfidf
+        self.tf = joblib.load(tpath) if tpath.exists() else build_tfidf(tpath)
+        r = json.loads((ROOT / rule).read_text())
+        assert len(r["weights"]) == len(self.encoders) + 1, "rule needs one weight per encoder + one for TF-IDF"
+        self.w = np.array(r["weights"], dtype=float) / sum(r["weights"])
+        self.tau, self.bias = r["tau"], np.array(r["bias"])
+        self.knn = None
+        if knn:
+            import neighbors as nb
+            tr = pd.read_csv(ROOT / "data/train.csv")
+            self.knn = nb.KnnIndex(tr.query_text.values, tr.target.values)
+        n_enc = sum(e.params for e in self.encoders)
+        n_svm = int(self.tf["clf"].coef_.size + self.tf["clf"].intercept_.size)
+        self.params = {"encoder": n_enc, "tfidf_svm": n_svm, "total": n_enc + n_svm}
+        if len(self.encoders) > 1:
+            self.params["encoders"] = [e.params for e in self.encoders]
+        assert self.params["total"] <= PARAM_CAP, self.params
         import gc
         gc.collect(); gc.freeze()  # no garbage-collector pauses during queries
         for _ in range(5):
@@ -138,13 +168,15 @@ class IntentPipeline:
         return self.tf["clf"].decision_function(X) * self.tf["temp"]
 
     def _encoder_logits(self, texts):
-        enc = self.tok(list(texts), padding=True, truncation=True, max_length=self.max_len, return_tensors="pt")
-        if self.engine != "pytorch":
-            return self._sess.run(None, {"ids": enc["input_ids"].numpy(), "mask": enc["attention_mask"].numpy()})[0]
-        return self.encoder(enc["input_ids"], enc["attention_mask"]).float().numpy()
+        """List of logits, one array per encoder."""
+        if self._pool is None:
+            return [e.logits(texts) for e in self.encoders]
+        return list(self._pool.map(lambda e: e.logits(texts), self.encoders))
 
     def probs(self, texts):
-        p = self.w[0] * self._softmax(self._encoder_logits(texts)) + self.w[1] * self._softmax(self._tfidf_logits(texts))
+        p = self.w[-1] * self._softmax(self._tfidf_logits(texts))
+        for wi, lo in zip(self.w[:-1], self._encoder_logits(texts)):
+            p = p + wi * self._softmax(lo)
         if self.knn is not None:
             import neighbors as nb
             kp, best = self.knn.query(texts)
@@ -175,11 +207,11 @@ def main():
     ap.add_argument("text", nargs="?")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--knn", action="store_true")
-    ap.add_argument("--encoder", default=DEFAULT["encoder"])
+    ap.add_argument("--encoder", nargs="+", default=[DEFAULT["encoder"]], help="one or more encoder dirs")
     ap.add_argument("--rule", default=DEFAULT["rule"])
     a = ap.parse_args()
     t0 = time.perf_counter()
-    pipe = IntentPipeline(encoder=a.encoder, rule=a.rule, knn=a.knn)
+    pipe = IntentPipeline(encoder=a.encoder if len(a.encoder) > 1 else a.encoder[0], rule=a.rule, knn=a.knn)
     print(f"loaded in {time.perf_counter() - t0:.1f}s | params {pipe.params}")
     if a.text:
         print(pipe.predict(a.text))

@@ -53,6 +53,10 @@ def load(full_dir):
     state = {k: v for k, v in state.items() if not k.startswith("drops.")}
     model.load_state_dict(state, strict=True)
     model.eval()
+    if (full_dir / "keep.npy").exists():  # vocabulary-trimmed brain (src/trim_vocab.py): remap token ids
+        from trim_vocab import RemapTokenizer
+        meta = json.loads((full_dir / "metrics.json").read_text())
+        tok = RemapTokenizer(tok, np.load(full_dir / "keep.npy"), meta["vocab_original"])
     return model, tok, cfg
 
 

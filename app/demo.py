@@ -207,10 +207,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--knn", action="store_true")
     ap.add_argument("--port", type=int, default=7860)
+    ap.add_argument("--encoder", nargs="+", default=None, help="encoder dir(s); default = v007 (src/infer.py DEFAULT)")
+    ap.add_argument("--rule", default=None, help="rule json matching the encoders (weights, tau, bias)")
     a = ap.parse_args()
     tr = pd.read_csv(ROOT / "data/train.csv")
     print("loading models…", flush=True)
-    pipe = IntentPipeline(knn=a.knn)
+    kw = {}
+    if a.encoder:
+        kw["encoder"] = a.encoder if len(a.encoder) > 1 else a.encoder[0]
+    if a.rule:
+        kw["rule"] = a.rule
+    pipe = IntentPipeline(knn=a.knn, **kw)
     print(f"ready: {pipe.params}", flush=True)
     ui = build(pipe, class_hints(tr), demo_examples(tr))
     ui.launch(server_name="127.0.0.1", server_port=a.port, css=CSS, head=HEAD, theme=gr.themes.Base())
