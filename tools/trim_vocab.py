@@ -6,7 +6,8 @@ are all kept (all train/test tokens are). Dropped tokens map to <unk> at inferen
 Kept tokens: special tokens + every token produced on train, test and 5 augmented views of train + tokens made only
 of Latin / Devanagari / digits / punctuation; if still over budget, the highest-id unused tokens are dropped.
 
-    python tools/trim_vocab.py --total 299500000   # writes runs/hing_full_trim/full and runs/muril_full_trim/full
+    python tools/trim_vocab.py --total 299500000   # writes runs/hing_full_trim/full and runs/muril_full_trim/full (v008)
+    python tools/trim_vocab.py --models hing_full=runs/hing_full/full dapt_hing_full=runs/dapt_hing_full/full   # v010
 """
 import argparse
 import json
@@ -26,7 +27,7 @@ from augment import augment  # noqa: E402
 from verify_model import Brain, load  # noqa: E402
 
 SCRIPT_OK = re.compile(r"^[▁ऀ-ॿ᳐-᳿꣠-ꣿa-zA-Z0-9\s.,!?'\"\-:;()/&%@#+*=_]*$")
-MODELS = {"hing": "runs/hing_full/full", "muril": "runs/muril_full/full"}
+DEFAULT_MODELS = ["hing_full=runs/hing_full/full", "muril_full=runs/muril_full/full"]
 SVM_PARAMS = 9_291_576
 
 
@@ -51,7 +52,9 @@ def logits(model, tok, texts, id_map=None, bs=64):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--total", type=int, default=299_500_000, help="target total params incl. the TF-IDF SVM")
+    ap.add_argument("--models", nargs="+", default=DEFAULT_MODELS, help="name=full_dir; writes runs/<name>_trim/full")
     a = ap.parse_args()
+    MODELS = dict(m.split("=", 1) for m in a.models)
     tr = pd.read_csv(ROOT / "data/train.csv"); te = pd.read_csv(ROOT / "data/test.csv")
     rng = random.Random(0)
     texts = list(tr.query_text) + list(te.query_text) + [augment(t, rng) for t in tr.query_text for _ in range(5)]
@@ -79,11 +82,11 @@ def main():
     for name, (model, tok, cfg, V, used, script) in loaded.items():
         k = keep[name]
         unk = tok.unk_token_id
-        assert unk in set(k) and all(i == j for i, j in zip(k[:4], range(4))) or name == "muril", "special ids must keep their positions"
+        assert unk in set(k) and all(i == j for i, j in zip(k[:4], range(4))), "special ids must keep their positions"
         id_map = np.full(V, int(np.searchsorted(k, unk)), dtype=np.int64)
         id_map[k] = np.arange(len(k))
         src = ROOT / MODELS[name]
-        dst = ROOT / f"runs/{name}_full_trim/full"
+        dst = ROOT / f"runs/{name}_trim/full"
         dst.mkdir(parents=True, exist_ok=True)
         enc_cfg = model.enc.config.__class__.from_dict(model.enc.config.to_dict())
         enc_cfg.vocab_size = len(k)
@@ -110,7 +113,7 @@ def main():
         print(f"{name}: {n_params:,} params | test logits max |diff| vs untrimmed {diff:.2e} | argmax agreement {same:.4f}")
 
     total = sum(report.values()) + SVM_PARAMS
-    print(f"TOTAL = {report['hing']:,} + {report['muril']:,} + {SVM_PARAMS:,} = {total:,}")
+    print("TOTAL = " + " + ".join(f"{v:,}" for v in report.values()) + f" + {SVM_PARAMS:,} = {total:,}")
     assert total <= 300_000_000
 
 
