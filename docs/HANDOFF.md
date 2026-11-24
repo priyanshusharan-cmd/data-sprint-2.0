@@ -1,52 +1,62 @@
-# Handoff: state on 24 Nov 2026 (afternoon IST)
+# Handoff: state on 24 Nov 2026 (~5 PM IST)
 
-For the teammate taking over, and for their Claude. Read this, then `CLAUDE.md` and `docs/PLAN.md`.
-Everything below was verified on the original laptop before zipping.
+For the teammate and their Claude. Read this, then `CLAUDE.md` and `docs/PLAN.md`.
+Everything below was verified on the original laptop before zipping. **This zip is a snapshot of branch
+`exp/dapt`** (= `main` + the pretraining work and v009/v010), without git history.
 
 ## First thing to do (teammate's Claude)
-1. `git checkout main && git pull origin main` to get the latest `main` (the zip may be older than GitHub).
-2. Create your own branch for all experiments: `git checkout -b exp/<your-name>`. **Commit and push only to
-   that branch** (`git push -u origin exp/<your-name>`). Never commit to, rebase or force-push `main`.
-3. Leave `main` exactly as it is: it holds the verified v007 pipeline that the demo and the reproducible notebook use.
-   Only the repo owner merges a winning change into `main`, after it beats v007 on 5-fold + the practice exam.
-4. Uploads to Kaggle are done by the account owner only; prepare the CSV on your branch and send it.
+1. The zip has no `.git`. To use branches, clone the private repo
+   (`git clone https://github.com/priyanshusharan-cmd/data-sprint-2.0.git`), `git checkout exp/dapt`, then copy
+   the zip's `runs/` folder into the clone. Without repo access, work in the zip folder and send changes back.
+2. Do all your work on **your own branch**: `git checkout -b exp/<your-name>` (from `exp/dapt` or `main`).
+   Commit and push only to that branch. Never commit to, rebase or force-push `main` or `exp/dapt`.
+3. `main` holds the verified v007 pipeline used by the demo and the reproducible notebook. Only the repo owner
+   merges a winning change into `main`.
+4. Kaggle uploads go through the owner (5 per day, resets 05:30 IST). Prepare the CSV and register it with
+   `python src/subtrack.py add <csv> --stage <name> --note "..."`.
+5. **Do not repeat what already failed** (table below), and gate every idea on 5-fold or at least fold 0
+   + the practice exam (`src/testlike.py`) before asking for an upload.
 
 ## Where we stand
-- **Public leaderboard #1: v007 = 0.86786.** v007 = full-data HingRoBERTa-mixed + full-data char TF-IDF/LinearSVC,
-  probabilities averaged 50/50, then the class-55 rule (tau 0 + per-class biases) from
-  `submissions/v007_final-hingfull+tfidf.json`. **287,378,288 parameters** (cap 300M).
-- v005 = full MuRIL + TF-IDF, public 0.84464. Registry of all uploads: `submissions/registry.csv`
-  (v001 … v007; v004 and v006 were never uploaded).
-- **Deadlines:** Unstop final **24 Nov 9 PM IST**. Live demo + defense + slides **25 Nov**.
-- **Kaggle final picks: v007 + v005 must be ticked** on Kaggle → Submissions before 9 PM IST (only the
-  account owner can do it). Private score = the better of the two ticked picks.
-- Kaggle allows 5 uploads per day (resets 05:30 IST).
-- 24 Nov afternoon: a competitor moved above us on public at **0.87040** (+0.0025). On 974 public rows that is
-  about 2–3 rows' worth of macro-F1, well inside noise; the private board (3,938 rows) decides. This is a reason
-  to consider the open decision below, not to chase the public board with untested changes.
+| version | what | params | fold-0 / OOF check | public |
+|---|---|---|---|---|
+| **v007** | HingRoBERTa (full) + TF-IDF 50/50, tuned rule | 287,378,288 | OOF 0.9169, practice 0.9191 | **0.86786** (best) |
+| v008 | trimmed HingRoBERTa + trimmed MuRIL + TF-IDF | 299,498,920 | OOF 0.9210, practice 0.9226 | 0.85792 |
+| v009 | DAPT HingRoBERTa (MLM on train+test text) + TF-IDF, v007 rule | 287,378,288 | fold0 blend 0.9085, practice 0.8999 (v007 fold0: 0.9057 / 0.8935) | 0.86359 |
+| **v010** | trimmed v007 HingRoBERTa + trimmed DAPT HingRoBERTa + TF-IDF 1/1/1, v007 rule | 299,498,920 | fold0 0.9083, practice 0.9122 | **uploading now** |
+
+- Leader on public: **0.87040** (Jihaan Jain). Public = 974 rows (20%); final ranking uses the private 80%.
+- **Final picks (Kaggle → Submissions, ticked by the owner before 9 PM IST 24 Nov):** v007 + the best of
+  v009/v010. Private score = the better of the two ticked picks.
+- Lesson so far: local gains of +0.003–0.006 did **not** transfer to public three times (challenger, v008, v009).
+  MuRIL mixes never help on public. Demo = v007 (two encoders would break <50 ms).
+- Deadlines: Unstop final **24 Nov 9 PM IST**. Live demo + defense + slides **25 Nov**.
 
 ## Verified working
 - `python src/infer.py --check`: the demo pipeline reproduces v007 **4,912/4,912 identical**; median latency
   ~20 ms, max 35 ms (laptop plugged in). **On battery, latency roughly doubles (40–46 ms)**: always demo plugged
   in, in best-performance power mode, with Chrome closed.
-- `python app/demo.py` → http://127.0.0.1:7860 (Gradio, offline, ONNX Runtime, 6 threads on P-cores).
+- `python app/demo.py` → http://127.0.0.1:7860 (Gradio, offline, ONNX Runtime). `model.onnx` is not in the zip;
+  `infer.py` exports it automatically on first start (about a minute, needs `onnx` installed).
 - `kaggle/reproduce_v007.ipynb`: re-run on a Kaggle T4 in 20.4 min gave a submission **100% identical** to v007.
 - "Set an alarm" → 55 is **correct**: in train.csv, setting/querying alarms is labelled 55 (61 rows); only
-  removing/turning off alarms is class 49 (81 rows). This is a defense talking point (`docs/DEFENSE.md`).
+  removing/turning off alarms is class 49 (81 rows). Defense talking point (`docs/DEFENSE.md`).
 
 ## Folder contents (what is in the zip)
-| path | what | in git? |
-|---|---|---|
-| `runs/hing_full/full/` | v007 encoder: `model.pt` (1.1 GB), `model.onnx`, tokenizer, `encoder_config` | no |
-| `runs/tfidf_aug/full/tfidf.joblib` | v007 TF-IDF + SVM (+ fold0–4 OOF outputs) | no |
-| `runs/muril_full/full/` | v005 encoder (MuRIL, full data) + test logits | no |
-| `runs/hing_lr5/`, `runs/muril_lr6/` | 5-fold OOF logits (used to tune rules / evaluate blends) | no |
-| `data/` | competition CSVs + `testlike.csv` (local LB proxy) + old pseudo-label files (unused) | yes |
-| `submissions/` | frozen v001–v007 files + registry | yes |
-| `docs/` | PLAN, JOURNEY (every experiment with scores), WRITEUP (2-page), DEFENSE (demo script + Q&A) | yes |
+| path | what |
+|---|---|
+| `runs/hing_full/full/` | v007 encoder (`model.pt`, tokenizer, `encoder_config`) — used by the demo |
+| `runs/dapt_hing_full/full/` | DAPT HingRoBERTa full-data model (v009) |
+| `runs/hing_full_trim/full/`, `runs/dapt_hing_full_trim/full/` | the two trimmed encoders of v010 (`id_map.npy` remaps token ids) |
+| `runs/tfidf_aug/` | TF-IDF + SVM: `full/tfidf.joblib` (used by all submissions) + 5-fold OOF |
+| `runs/hing_lr5/`, `runs/muril_lr6/` | 5-fold OOF logits of HingRoBERTa / MuRIL (rule tuning, blend checks) |
+| `runs/dapt_hing_ft/fold0/` | DAPT HingRoBERTa fold 0 (only fold of the pilot) |
+| `data/`, `submissions/` | competition CSVs + practice-exam rows; frozen v001–v010 + `registry.csv` |
+| `kaggle/` | `train.py` (`--init` to start from a checkpoint), `mlm_pretrain.py`, `dapt_pilot.ipynb`, `reproduce_v007.ipynb` |
+| `tools/` | `trim_vocab.py`, `compare_fold.py` (fold-0 gate), `make_dapt_sub.py`, notebook builder |
+| `docs/` | this file, DAPT_PILOT, PLAN, JOURNEY, WRITEUP, DEFENSE |
 
-Old experiment outputs were moved out of the project to `D:\data-sprint-archive-24nov` on the original laptop
-(not needed). **Do not copy `.venv/` between machines**: recreate it (below).
+MuRIL full models (v005/v008) are not included: MuRIL is a dead end on public. **Do not copy `.venv/`**.
 
 ## Setup on a new Windows machine
 ```powershell
@@ -62,7 +72,7 @@ Use `.venv\Scripts\python.exe`, not plain `python` (system Python lacks the pack
 - Third small linear model in the 12.6M spare parameters (`analysis/linear2.py`: Naive Bayes, word SVM,
   logistic regression): practice exam lower than v007 on every weight. Dropped.
 
-## v008 RESULT: public 0.85792 (worse than v007 0.86786) → finals stay v007 + v005
+## v008 RESULT: public 0.85792 (worse than v007 0.86786)
 Second time a HingRoBERTa + MuRIL mix improved validation and the practice exam but lost ~0.01 on public
 (challenger 0.85605). Conclusion: adding MuRIL does not transfer to the test; do not try more MuRIL mixes.
 
