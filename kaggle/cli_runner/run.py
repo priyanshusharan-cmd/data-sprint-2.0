@@ -21,11 +21,11 @@ PLAN = "backbones"   # "backbones": try new encoders vs HingRoBERTa (fold 0 + fu
                      # "phase2": second HingRoBERTa + MuRIL (the earlier plan, kept for reference)
 INDIC = "--model indicbert --lr 5e-5 --llrd 0.95 --epochs 10 --seed 42"            # ai4bharat/IndicBERTv2-MLM-Sam-TLM (MIT)
 HMBERT = "--model l3cube-pune/hing-mbert-mixed --lr 5e-5 --llrd 0.95 --epochs 10 --seed 42"   # Hinglish mBERT (CC-BY-4.0)
-QUEUES_BACKBONES = {
-    "0": [f"python kaggle/train.py {INDIC} --folds 0 --run indic_ft",
-          f"python kaggle/train.py {HMBERT} --folds 0 --run hmbert_ft"],
-    "1": [f"python kaggle/train.py {INDIC} --full --run indic_full",
-          f"python kaggle/train.py {HMBERT} --full --run hmbert_full"],
+QUEUES_BACKBONES = {  # one GPU (P100): each backbone's fold 0 then its full model, HingMBERT first
+    "0": [f"python kaggle/train.py {HMBERT} --folds 0 --run hmbert_ft",
+          f"python kaggle/train.py {HMBERT} --full --run hmbert_full",
+          f"python kaggle/train.py {INDIC} --folds 0 --run indic_ft",
+          f"python kaggle/train.py {INDIC} --full --run indic_full"],
 }
 QUEUES_PHASE2 = {
     "0": [
