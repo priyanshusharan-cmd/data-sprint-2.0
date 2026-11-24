@@ -62,6 +62,7 @@ def parse():
     p.add_argument("--fp16", type=int, default=1)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--limit", type=int, default=0, help="smoke test: use first N train rows")
+    p.add_argument("--init", default=None, help="start from a local encoder checkpoint (e.g. kaggle/mlm_pretrain.py output); tokenizer still from --model")
     return p.parse_args()
 
 
@@ -153,7 +154,7 @@ def predict(model, dl, dev, fp16):
 def train_one(a, name, tok, tr_t, tr_y, tr_w, val_sets, test_t, out_dir, dev):
     """Train; pick best epoch on mean macro-F1 over val_sets (clean + shifted). Returns metrics."""
     seed_all(a.seed)
-    model = Net(name).to(dev)
+    model = Net(a.init or name).to(dev)
     n_params = sum(p.numel() for p in model.parameters())
     assert n_params <= PARAM_CAP, f"{n_params} params > cap"
     counts = np.bincount(tr_y, minlength=N_CLASSES).astype(float)
