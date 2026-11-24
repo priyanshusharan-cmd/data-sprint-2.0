@@ -62,7 +62,11 @@ Use `.venv\Scripts\python.exe`, not plain `python` (system Python lacks the pack
 - Third small linear model in the 12.6M spare parameters (`analysis/linear2.py`: Naive Bayes, word SVM,
   logistic regression): practice exam lower than v007 on every weight. Dropped.
 
-## v008 built: trimmed three-model candidate (ready to upload, NOT uploaded yet)
+## v008 RESULT: public 0.85792 (worse than v007 0.86786) → finals stay v007 + v005
+Second time a HingRoBERTa + MuRIL mix improved validation and the practice exam but lost ~0.01 on public
+(challenger 0.85605). Conclusion: adding MuRIL does not transfer to the test; do not try more MuRIL mixes.
+
+## v008 details: trimmed three-model candidate
 - File: `submissions/v008_3model-trim.csv` (registered in `submissions/registry.csv`).
 - Models: `runs/hing_full_trim/full` (150,541,880) + `runs/muril_full_trim/full` (139,665,464) + TF-IDF
   (9,291,576) = **299,498,920 params**, built by `tools/trim_vocab.py`. Each trimmed model's test logits are
