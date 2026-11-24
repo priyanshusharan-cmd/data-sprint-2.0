@@ -51,7 +51,8 @@ parameters) was never used for a submission. Checked with the organisers' assert
   this subset ranked every submission correctly and predicted v005 within 0.004.
 - **Leak checks.** A pseudo-labelling gain disappeared once the teacher could no longer see the validation rows; we
   dropped the method.
-- **Upload rule.** Submit only a model that beats the best one on 5-fold evidence. Four uploads, each better than the last.
+- **Upload rule.** Submit only a model that beats the best one on local evidence. Up to v007 each upload beat the
+  last; afterwards local gains of +0.004 to +0.019 stopped transferring (section 4), so we kept v007.
 
 ## 4. Results
 | Version | Model | 5-fold macro-F1 | Test-like | Public LB |
@@ -61,12 +62,22 @@ parameters) was never used for a submission. Checked with the organisers' assert
 | v003 | MuRIL, one fold, tuned learning rate | 0.885* | 0.883* | 0.819 |
 | v005 | full-data MuRIL + TF-IDF 50/50 | 0.915 | 0.909 | 0.845 |
 | **v007** | **full-data HingRoBERTa + TF-IDF 50/50** | **0.917** | **0.919** | **0.868** |
+| v008 | vocabulary-trimmed HingRoBERTa + MuRIL + TF-IDF (299.5M) | 0.921 | 0.923 | 0.858 |
+| v009 | domain-adapted HingRoBERTa (MLM on task text) + TF-IDF | 0.909* | 0.900* | 0.864 |
+| v010 | two trimmed HingRoBERTas + TF-IDF (299.5M) | 0.908* | 0.912* | 0.862 |
 
-\* fold 0 only.
+\* fold 0 only (v007 on fold 0: 0.906 / 0.894). Final picks: v007 and v009.
 
 **Tried and dropped:** default MuRIL settings (0.738, under-trained); pseudo-labelling (no gain once leak-free);
-nearest-neighbour vote (+0.002 CV, changed 16 test rows); a three-model blend with vocabulary trimming (public 0.856);
-14-epoch training (worse on one of two folds); int8 quantisation (changed 15% of answers).
+nearest-neighbour vote (+0.002 CV, changed 16 test rows); a routed three-model blend (public 0.856); 14-epoch
+training (worse on one of two folds); a third linear model in the spare 12.6M parameters (lower test-like);
+int8 quantisation (changed 15% of answers). v008–v010 (table) won locally but not on public.
+
+**Vocabulary trimming and domain-adaptive pretraining.** To fit two encoders under 300M we removed embedding rows
+for tokens never seen in train, test or augmented train and outside Latin/Devanagari script (HingRoBERTa 278M →
+145–151M) with bit-identical test outputs. Domain-adaptive pretraining continued HingRoBERTa's masked-word
+training on the unlabelled task text for 6 epochs before fine-tuning; it learned faster and won on fold 0, but
+did not beat v007 on public. We kept the simplest model that held up.
 
 ## 5. Robustness, fallback and the live system
 - **Scripts:** the same model handles Devanagari, Roman Hinglish and mixed queries; augmentation teaches script
