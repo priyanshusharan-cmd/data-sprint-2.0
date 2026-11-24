@@ -69,7 +69,7 @@ def run_queue(gpu, jobs):
     qenv = dict(env, CUDA_VISIBLE_DEVICES=gpu if n_gpu > 1 else "0")
     for cmd in jobs:
         if "INIT" in cmd:  # start from the domain-adapted encoder only if the MLM step finished
-            ok = os.path.exists(f"{W}/mlm_hing/done.json")
+            ok = os.path.exists(f"{W}/mlm_hing/config.json")  # written by save_pretrained at the end
             cmd = cmd.replace("INIT", f"--init_from {W}/mlm_hing" if ok else "")
             if not ok:
                 print(f"[gpu{gpu}] MLM output missing: training from the public checkpoint", flush=True)

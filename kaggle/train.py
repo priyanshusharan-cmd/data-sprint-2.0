@@ -83,7 +83,8 @@ def parse():
     p.add_argument("--kd_alpha", type=float, default=0.5)
     p.add_argument("--kd_T", type=float, default=2.0)
     p.add_argument("--kd_test", type=int, default=0)
-    p.add_argument("--init_from", default=None)
+    p.add_argument("--init_from", "--init", dest="init_from", default=None,
+                   help="start from a local encoder checkpoint (kaggle/mlm_pretrain.py output); tokenizer still from --model")
     return p.parse_args()
 
 
