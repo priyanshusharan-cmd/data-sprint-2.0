@@ -62,7 +62,19 @@ Use `.venv\Scripts\python.exe`, not plain `python` (system Python lacks the pack
 - Third small linear model in the 12.6M spare parameters (`analysis/linear2.py`: Naive Bayes, word SVM,
   logistic regression): practice exam lower than v007 on every weight. Dropped.
 
-## Open decision: three-model blend as the second Kaggle pick (NOT started)
+## v008 built: trimmed three-model candidate (ready to upload, NOT uploaded yet)
+- File: `submissions/v008_3model-trim.csv` (registered in `submissions/registry.csv`).
+- Models: `runs/hing_full_trim/full` (150,541,880) + `runs/muril_full_trim/full` (139,665,464) + TF-IDF
+  (9,291,576) = **299,498,920 params**, built by `tools/trim_vocab.py`. Each trimmed model's test logits are
+  **bit-identical** to the untrimmed model (max |diff| 0.0). Inputs use `id_map.npy` to remap token ids.
+- Blend 0.35/0.3/0.35, rule tuned on 5-fold OOF: OOF 0.9210 (v007 0.9169), practice exam 0.9226 (v007 0.9191).
+  251 of 4,912 test answers differ from v007.
+- Plan: owner uploads v008 → `python src/subtrack.py submitted v008` → `lb v008 <score>`. If public ≥ v007, tick
+  **v007 + v008** as finals (replace v005). If lower, keep v007 + v005.
+- Not done for v008: demo integration (two encoders ≈ double latency; demo stays on v007) and a reproducible
+  notebook (v007's notebook + MuRIL full training + `tools/trim_vocab.py` would be needed if v008 ends up winning).
+
+## Background: the three-model analysis
 HingRoBERTa + MuRIL + TF-IDF, scored on 5-fold OOF (`src/postprocess.py runs/hing_lr5 runs/muril_lr6 runs/tfidf_aug --weights ...`):
 
 | weights hing/muril/tfidf | 5-fold tuned | practice exam |
