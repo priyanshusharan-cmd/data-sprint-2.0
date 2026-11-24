@@ -119,3 +119,10 @@ max; the P100 is retired and falls back to T4).
 NEW-G 0.9133 / 0.9103; HingMBERT + TF-IDF geo 0.9076 / 0.9010; IndicBERTv2 + TF-IDF geo 0.9074 / 0.9072; HingRoBERTa +
 IndicBERTv2 + TF-IDF geo 0.9134 / 0.9116 (= NEW-G within noise, but two encoders: trimming + double latency). Neither new
 backbone replaces HingRoBERTa; NEW-G stays the best candidate.
+
+**Public results of the last two uploads (24 Nov, 20:05):** NEW-G (geometric blend) 0.86267; NEW-T (v007 + out-of-scope
+fallback at confidence < 0.25, 65 rows -> 55) 0.86578. Both below v007 (0.86786). Seven changes in a row have now lost to
+v007 on public; local validation (OOF and the practice exam) does not predict small changes on this test.
+Final picks stay **v007 + v009**: NEW-T has the higher public score (0.86578 vs 0.86359) but differs from v007 on only 65
+rows, so as a second pick it adds almost nothing if v007 underperforms on private; v009 differs on 285 rows and gives a
+genuinely different second chance. Demo stays on v007.
