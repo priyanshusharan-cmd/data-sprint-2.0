@@ -17,7 +17,17 @@ W = "/kaggle/working/runs"
 HING = "--model hingroberta --lr 5e-5 --llrd 0.95 --epochs 10"
 MURIL = "--model muril --lr 6e-5 --llrd 0.95 --epochs 10"   # v005's MuRIL settings (registry v003/v005)
 TRIM = "--top 60000"   # keep every competition token + the 60k most frequent pieces (demo coverage); lossless
-QUEUES = {
+PLAN = "backbones"   # "backbones": try new encoders vs HingRoBERTa (fold 0 + full model in parallel per encoder)
+                     # "phase2": second HingRoBERTa + MuRIL (the earlier plan, kept for reference)
+INDIC = "--model indicbert --lr 5e-5 --llrd 0.95 --epochs 10 --seed 42"            # ai4bharat/IndicBERTv2-MLM-Sam-TLM (MIT)
+HMBERT = "--model l3cube-pune/hing-mbert-mixed --lr 5e-5 --llrd 0.95 --epochs 10 --seed 42"   # Hinglish mBERT (CC-BY-4.0)
+QUEUES_BACKBONES = {
+    "0": [f"python kaggle/train.py {INDIC} --folds 0 --run indic_ft",
+          f"python kaggle/train.py {HMBERT} --folds 0 --run hmbert_ft"],
+    "1": [f"python kaggle/train.py {INDIC} --full --run indic_full",
+          f"python kaggle/train.py {HMBERT} --full --run hmbert_full"],
+}
+QUEUES_PHASE2 = {
     "0": [
         f"python kaggle/train.py {HING} --seed 42 --run hing_lr5",
         f"python kaggle/train.py {HING} --seed 42 --full --run hing_full",
@@ -36,6 +46,7 @@ QUEUES = {
     ],
 }
 
+QUEUES = QUEUES_BACKBONES if PLAN == "backbones" else QUEUES_PHASE2
 REPO = "/tmp/repo"
 shutil.rmtree(REPO, ignore_errors=True); os.makedirs(REPO)
 arc = glob.glob("/kaggle/input/**/code.tar.gz", recursive=True)
@@ -60,7 +71,7 @@ status = []
 
 def package():
     with lock:
-        subprocess.run("cd /kaggle/working && rm -f runs_all.zip && zip -qr runs_all.zip runs -x 'runs/*/full/model.pt' "
+        subprocess.run("cd /kaggle/working && rm -f runs_all.zip && zip -qr runs_all.zip runs -x 'runs/*/full/model.pt' 'runs/*/fold*/*emb.npy' "
                        "'runs/*/trim/model.pt' 'runs/mlm_*/*' && ls -la runs_all.zip", shell=True)
         subprocess.run(f"grep -H '\"best_score\"' {W}/*/fold*/metrics.json", shell=True)
 
